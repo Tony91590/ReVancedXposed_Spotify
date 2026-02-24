@@ -70,6 +70,10 @@ android {
     }
     buildFeatures.buildConfig = true
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "RVX Spotify (Test)")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = false

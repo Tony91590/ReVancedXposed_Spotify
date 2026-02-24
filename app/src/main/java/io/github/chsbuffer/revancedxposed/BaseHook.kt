@@ -5,6 +5,7 @@ import android.app.Application
 import android.os.Build
 import app.revanced.extension.shared.Logger
 import app.revanced.extension.shared.Utils
+import dalvik.system.BaseDexClassLoader
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
@@ -90,7 +91,9 @@ data class Pairs(
 @Suppress("UNCHECKED_CAST")
 @OptIn(ExperimentalSerializationApi::class)
 class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
-    val file = File(app.cacheDir.path, BuildConfig.APPLICATION_ID.toSha256())
+    // Use a filename that blends in with Spotify's own cache files.
+    // A bare SHA-256 hash stands out as suspicious in the cache directory.
+    val file = File(app.cacheDir.path, "com.spotify.music.scf.${BuildConfig.APPLICATION_ID.toSha256().take(12)}")
 
     val pref = runCatching { ProtoBuf.decodeFromByteArray<Pairs>(file.readBytes()) }.getOrElse {
         Pairs(mutableMapOf())
@@ -145,9 +148,57 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
     private val moduleRel = BuildConfig.COMMIT_HASH
     private var cache = SharedPrefCache(app)
     private var dexkit = run {
-        System.loadLibrary("dexkit")
+        loadNativeLibrary("dexkit")
         DexKitCacheBridge.init(cache)
         DexKitCacheBridge.create("", lpparam.appInfo.sourceDir)
+    }
+
+    /**
+     * Loads a native library from a temporary file with a randomized name,
+     * preventing detection by apps scanning /proc/self/maps for known library names like "dexkit".
+     */
+    private fun loadNativeLibrary(libName: String) {
+        synchronized(nativeLibLock) {
+            if (nativeLibLoaded) return
+            try {
+                val moduleClassLoader = BaseHook::class.java.classLoader
+                if (moduleClassLoader is BaseDexClassLoader) {
+                    val libPath = moduleClassLoader.findLibrary(libName)
+                    if (libPath != null) {
+                        val origFile = File(libPath)
+                        if (origFile.exists()) {
+                            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+                            val randomName = "lib" + (1..12).map { chars.random() }.joinToString("") + ".so"
+                            val tempFile = File(app.cacheDir, randomName)
+                            try {
+                                origFile.inputStream().use { input ->
+                                    tempFile.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                                System.load(tempFile.absolutePath)
+                                nativeLibLoaded = true
+                                return
+                            } catch (e: Throwable) {
+                                Logger.printDebug { "Stealth load failed: ${e.message}" }
+                            } finally {
+                                tempFile.delete()
+                            }
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                Logger.printDebug { "Native library path discovery failed: ${e.message}" }
+            }
+            // Fallback to standard loading
+            System.loadLibrary(libName)
+            nativeLibLoaded = true
+        }
+    }
+
+    companion object {
+        private var nativeLibLoaded = false
+        private val nativeLibLock = Any()
     }
 
     override fun Hook() {
@@ -181,7 +232,9 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         if (!isCached) {
             cache.clearAll()
             cache.put("id", id)
-            Utils.showToastLong("ReVanced Xposed is initializing, please wait...")
+            if (DEBUG) {
+                Utils.showToastLong("ReVanced Xposed is initializing, please wait...")
+            }
         }
     }
 

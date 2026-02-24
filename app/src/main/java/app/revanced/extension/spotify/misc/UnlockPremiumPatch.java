@@ -1,13 +1,16 @@
 /*
  * Custom changes:
- * Wipe stubbed types: REMOVED_HOME_SECTIONS, overrideAttributes, removeHomeSections
+ * Wipe stubbed types: REMOVED_HOME_SECTIONS, createOverriddenAttributesMap, removeHomeSections
+ * Non-destructive attribute override: clones AccountAttribute objects instead of mutating in-place
  * */
 package app.revanced.extension.spotify.misc;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
-import java.util.Iterator;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -47,6 +50,8 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
+            // Disables player and app ads.
+            new OverrideAttribute("ads", FALSE),
             // Works along on-demand, allows playing any song without restriction.
             new OverrideAttribute("player-license", "on-demand"),
             // Disables shuffle being initially enabled when first playing a playlist.
@@ -89,12 +94,17 @@ public final class UnlockPremiumPatch {
     );
 
     /**
-     * Injection point. Override account attributes.
+     * Injection point. Creates a non-destructive copy of the attributes map with overridden values.
+     * Original AccountAttribute objects are NOT modified, preventing server-side detection
+     * through serialization of tampered protobuf data back to Spotify servers.
      */
-    public static void overrideAttributes(Map<String, ?> attributes) {
+    @SuppressWarnings("unchecked")
+    public static Map<String, ?> createOverriddenAttributesMap(Map<String, ?> originalMap) {
         try {
+            Map<String, Object> result = new LinkedHashMap<>((Map<String, Object>) originalMap);
+
             for (OverrideAttribute override : PREMIUM_OVERRIDES) {
-                var attribute = attributes.get(override.key);
+                Object attribute = result.get(override.key);
 
                 if (attribute == null) {
                     if (override.isExpected) {
@@ -103,21 +113,64 @@ public final class UnlockPremiumPatch {
                     continue;
                 }
 
-                Object overrideValue = override.overrideValue;
-                Object originalValue;
-                originalValue = XposedHelpers.getObjectField(attribute, "value_");
+                Object originalValue = XposedHelpers.getObjectField(attribute, "value_");
 
-                if (overrideValue.equals(originalValue)) {
+                if (override.overrideValue.equals(originalValue)) {
                     continue;
                 }
 
                 Logger.printInfo(() -> "Overriding account attribute " + override.key +
-                        " from " + originalValue + " to " + overrideValue);
+                        " from " + originalValue + " to " + override.overrideValue);
 
-                XposedHelpers.setObjectField(attribute, "value_", overrideValue);
+                // Clone the attribute object so the original protobuf data stays untouched
+                // for server serialization, preventing server-side state mismatch detection.
+                Object clonedAttribute = shallowCloneObject(attribute);
+                XposedHelpers.setObjectField(clonedAttribute, "value_", override.overrideValue);
+                result.put(override.key, clonedAttribute);
             }
+
+            return result;
         } catch (Exception ex) {
-            Logger.printException(() -> "overrideAttributes failure", ex);
+            Logger.printException(() -> "createOverriddenAttributesMap failure", ex);
+            return originalMap;
+        }
+    }
+
+    /**
+     * Creates a shallow clone of an object by allocating a new instance via Unsafe
+     * (without calling any constructor) and copying all instance fields from the hierarchy.
+     * Unsafe is accessed entirely via reflection to avoid compile-time dependency on sun.misc.
+     */
+    private static volatile Object unsafeInstance;
+    private static volatile java.lang.reflect.Method allocateInstanceMethod;
+
+    private static Object shallowCloneObject(Object original) {
+        try {
+            if (unsafeInstance == null) {
+                Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+                Field unsafeField = unsafeClass.getDeclaredField("theUnsafe");
+                unsafeField.setAccessible(true);
+                unsafeInstance = unsafeField.get(null);
+                allocateInstanceMethod = unsafeClass.getMethod("allocateInstance", Class.class);
+            }
+
+            Class<?> clazz = original.getClass();
+            Object clone = allocateInstanceMethod.invoke(unsafeInstance, clazz);
+
+            // Copy all instance fields including those from superclasses.
+            Class<?> current = clazz;
+            while (current != null && current != Object.class) {
+                for (Field f : current.getDeclaredFields()) {
+                    if (Modifier.isStatic(f.getModifiers())) continue;
+                    f.setAccessible(true);
+                    f.set(clone, f.get(original));
+                }
+                current = current.getSuperclass();
+            }
+
+            return clone;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to clone " + original.getClass().getName(), e);
         }
     }
 
@@ -138,34 +191,40 @@ public final class UnlockPremiumPatch {
         int getFeatureTypeId(T section);
     }
 
-    private static <T> void removeSections(
+    /**
+     * Returns a new filtered list with ad sections removed.
+     * Does NOT mutate the original protobuf list, preventing detection through
+     * protobuf integrity checks or server-side serialization of the modified structure.
+     */
+    private static <T> List<T> filterSections(
             List<T> sections,
             FeatureTypeIdProvider<T> featureTypeExtractor,
             List<Integer> idsToRemove
     ) {
         try {
-            Iterator<T> iterator = sections.iterator();
-
-            while (iterator.hasNext()) {
-                T section = iterator.next();
+            List<T> filtered = new java.util.ArrayList<>(sections.size());
+            for (T section : sections) {
                 int featureTypeId = featureTypeExtractor.getFeatureTypeId(section);
                 if (idsToRemove.contains(featureTypeId)) {
-                    Logger.printInfo(() -> "Removing section with feature type id " + featureTypeId);
-                    iterator.remove();
+                    Logger.printInfo(() -> "Filtering section with feature type id " + featureTypeId);
+                } else {
+                    filtered.add(section);
                 }
             }
+            return filtered;
         } catch (Exception ex) {
-            Logger.printException(() -> "removeSections failure", ex);
+            Logger.printException(() -> "filterSections failure", ex);
+            return sections;
         }
     }
 
     /**
-     * Injection point. Remove ads sections from home.
-     * Depends on patching abstract protobuf list ensureIsMutable method.
+     * Injection point. Returns a new list with ads sections filtered from home.
+     * Original protobuf list is not modified.
      */
-    public static void removeHomeSections(List<?> sections) {
-        Logger.printInfo(() -> "Removing ads section from home");
-        removeSections(
+    public static List<?> filterHomeSections(List<?> sections) {
+        Logger.printInfo(() -> "Filtering ads sections from home");
+        return filterSections(
                 sections,
                 section -> XposedHelpers.getIntField(section, "featureTypeCase_"),
                 REMOVED_HOME_SECTIONS
@@ -173,12 +232,12 @@ public final class UnlockPremiumPatch {
     }
 
     /**
-     * Injection point. Remove ads sections from browse.
-     * Depends on patching abstract protobuf list ensureIsMutable method.
+     * Injection point. Returns a new list with ads sections filtered from browse.
+     * Original protobuf list is not modified.
      */
-    public static void removeBrowseSections(List<?> sections) {
-        Logger.printInfo(() -> "Removing ads section from browse");
-        removeSections(
+    public static List<?> filterBrowseSections(List<?> sections) {
+        Logger.printInfo(() -> "Filtering ads sections from browse");
+        return filterSections(
                 sections,
                 section -> XposedHelpers.getIntField(section, "sectionTypeCase_"),
                 REMOVED_BROWSE_SECTIONS
