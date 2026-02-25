@@ -66,7 +66,7 @@ There is something you need to know in order to use it, so find it on the xManag
 - Sanitize sharing links
 
 ## Downloads
-- **Release build**: [Download](https://github.com/simoabid/ReVancedXposed_Spotify/releases/latest)
+- **Release build**: [Download](https://github.com/simoabid/RVX-Spotify/releases/latest)
 
 > [!NOTE]  
 > The package name and signature of this build are different every day. You don't have to reinstall it every day.
