@@ -1,26 +1,96 @@
 name: Bug report
-description: File a bug/issue
+description: Report a broken or misbehaving patch
 title: "[Bug] "
+labels: ["bug"]
 body:
-- type: checkboxes
-  attributes:
-    label: Is there an existing issue for this?
-    options:
-    - label: I have searched the existing issues
+  - type: checkboxes
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched the existing issues and this is not a duplicate
+          required: true
+        - label: I have read the README and CONTRIBUTING.md
+          required: true
+
+  - type: dropdown
+    attributes:
+      label: Bug category
+      description: What area does the bug affect?
+      options:
+        - Forced logout / session termination
+        - Ads still showing
+        - App crash
+        - Hook not working
+        - Build / installation issue
+        - Other
+    validations:
       required: true
-- type: input
-  attributes:
-    label: Environment
-    description: |
-      Example: LineageOS 21, Android 14, Magisk 29.0, LSPosed-v1.9.2-7024. Alternatively, upload the LSPosed log.
-  validations:
-    required: false
-- type: textarea
-  attributes:
-    label: Current Behavior
-    description: |
-      A concise description of what you're experiencing, along with the version of the application.
-  
-      Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in.
-  validations:
-    required: false
+
+  - type: input
+    attributes:
+      label: Spotify version
+      description: "Settings → About → App version, e.g. `9.0.44.478`"
+      placeholder: "9.0.xx.xxx"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Android version & device
+      description: "e.g. `Android 14, Pixel 7` or `LineageOS 21 (Android 14), OnePlus 9`"
+      placeholder: "Android XX, Device model"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Xposed framework & version
+      description: "e.g. `LSPosed v1.9.2-7024 (Zygisk)` or `EdXposed`"
+      placeholder: "LSPosed vX.X.X-XXXX"
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Module version
+      description: "Release tag (e.g. `v260225`) or short commit hash shown in LSPosed module list"
+      placeholder: "v260225 or abc1234"
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Current behavior
+      description: What is happening? Be as specific as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps that reliably trigger the bug.
+      placeholder: |
+        1. Open Spotify
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Logs
+      description: |
+        Paste relevant `adb logcat` output. Filter with:
+        ```
+        adb logcat -s LSPosed | grep -i revanced
+        ```
+        or attach the full LSPosed log export.
+      render: text
+    validations:
+      required: false

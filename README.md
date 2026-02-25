@@ -3,6 +3,24 @@
   <br>
 </div>
 
+# ReVancedXposed_Spotify (Maintained Fork)
+
+> ⚠️ **Active community-maintained fork**
+
+This repository is an actively maintained fork of the original  
+[chsbuffer/ReVancedXposed_Spotify](https://github.com/chsbuffer/ReVancedXposed_Spotify),  
+which was archived and is now read-only.
+
+The goal of this fork is to:
+- Fix bugs and compatibility issues
+- Keep the project working with newer dependencies
+- Improve stability and maintainability
+- Continue development where the original repository stopped
+
+All credit for the original implementation goes to the original author and contributors.
+
+This fork remains licensed under **GPL-3.0**, in accordance with the original project license.
+
 **ReVanced LSPosed module by ChsBuffer, just for Spotify.**  
 >[!IMPORTANT]  
 > - This is **NOT an official ReVanced project**, do not ask the ReVanced developers for help.
@@ -48,12 +66,13 @@ There is something you need to know in order to use it, so find it on the xManag
 - Sanitize sharing links
 
 ## Downloads
-- **Release build**: [Download](https://github.com/chsbuffer/ReVancedXposed_Spotify/releases/latest)
+- **Release build**: [Download](https://github.com/simoabid/ReVancedXposed_Spotify/releases/latest)
 
 > [!NOTE]  
 > The package name and signature of this build are different every day. You don't have to reinstall it every day.
 
 ## ⭐ Credits
 
+[chsbuffer/ReVancedXposed_Spotify](https://github.com/chsbuffer/ReVancedXposed_Spotify): All credit for the original implementation goes to the original author.
 [DexKit](https://luckypray.org/DexKit/en/): a high-performance dex runtime parsing library.  
 [ReVanced](https://revanced.app): Continuing the legacy of Vanced at [revanced.app](https://revanced.app)  
