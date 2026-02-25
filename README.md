@@ -3,7 +3,7 @@
   <br>
 </div>
 
-# ReVancedXposed_Spotify (Maintained Fork)
+# RVX-Spotify (Maintained Fork)
 
 > ⚠️ **Active community-maintained fork**
 
