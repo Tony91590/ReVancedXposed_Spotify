@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'   # triggers on versioned tags, e.g. v260225, v1.1.0
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create the GitHub release
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0   # needed so git log date is available for versionName
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Derive a deterministic seed from the tag name so the package
+      # name is stable for the lifetime of this release.
+      - name: Derive package-name seed from tag
+        id: seed
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Convert tag characters to a numeric seed via a simple hash
+          SEED=$(echo -n "$TAG" | cksum | awk '{print $1}')
+          echo "NUMBER=${SEED}" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG → seed: $SEED"
+
+      - name: Build release APK
+        run: ./gradlew :app:assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.seed.outputs.NUMBER }}
+
+      - name: Rename APK
+        id: apk
+        run: |
+          TAG="${{ github.ref_name }}"
+          APK_NAME="RVX-Spotify-${TAG}.apk"
+          cp app/build/outputs/apk/universal/release/app-universal-release.apk "${APK_NAME}"
+          echo "APK_NAME=${APK_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk-${{ github.ref_name }}
+          path: |
+            ${{ steps.apk.outputs.APK_NAME }}
+            app/build/outputs/mapping/universalRelease/mapping.txt
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Strip leading 'v' to match CHANGELOG section header if needed
+          VERSION="${TAG#v}"
+          # Extract the block between the matching header and the next header
+          NOTES=$(awk "/^## \[${TAG}\]/{found=1; next} found && /^## /{exit} found" CHANGELOG.md)
+          if [ -z "$NOTES" ]; then
+            NOTES=$(awk "/^## \[v${VERSION}\]/{found=1; next} found && /^## /{exit} found" CHANGELOG.md)
+          fi
+          if [ -z "$NOTES" ]; then
+            NOTES="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          fi
+          # Write to a temp file to safely pass multiline content to gh
+          printf '%s\n' "$NOTES" > /tmp/release_notes.md
+          echo "Release notes written."
+
+      - name: Create GitHub release
+        run: |
+          TAG="${{ github.ref_name }}"
+          gh release create "${TAG}" \
+            "${{ steps.apk.outputs.APK_NAME }}" \
+            app/build/outputs/mapping/universalRelease/mapping.txt \
+            --title "Release ${TAG}" \
+            --notes-file /tmp/release_notes.md \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

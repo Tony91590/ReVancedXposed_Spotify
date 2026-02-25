@@ -1,12 +1,51 @@
 name: Feature request
-description: Suggest an idea for this project
-title: "[Feature request] "
+description: Suggest a new patch or improvement to an existing one
+title: "[Feature] "
+labels: ["enhancement"]
 body:
-- type: markdown
-  attributes:
-    value: |
-      **PLEASE READ BEFORE SUBMITTING**
-      This project is an Xposed port of ReVanced ([revanced.app](https://revanced.app)). Features that do not exist in the official ReVanced will not be accepted. Some apps are not patchable on their latest versions due to technical limitations.
-- type: textarea
-  attributes:
-    label: Describe the feature you'd like
+  - type: markdown
+    attributes:
+      value: |
+        **Please read before submitting.**
+        This project is an Xposed module that ports ReVanced patches to Spotify.
+        - Features must be technically feasible via Xposed hooking.
+        - Features that imply piracy or redistribution of paid content will be closed.
+        - Check [existing issues](../../issues) and the [CHANGELOG](../../blob/main/CHANGELOG.md) before opening a new request.
+
+  - type: checkboxes
+    attributes:
+      label: Pre-flight checklist
+      options:
+        - label: I have searched existing issues and this has not been requested before
+          required: true
+        - label: This request does not involve distributing or bypassing paid content
+          required: true
+
+  - type: textarea
+    attributes:
+      label: Describe the feature
+      description: What should the module do that it currently does not?
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Why is this useful?
+      description: What problem does it solve, or what user experience does it improve?
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Spotify version tested on
+      description: "The version where this behavior exists / was observed, e.g. `9.0.44.478`"
+      placeholder: "9.0.xx.xxx"
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Links, screenshots, relevant APK smali / decompiled snippets, etc.
+    validations:
+      required: false
