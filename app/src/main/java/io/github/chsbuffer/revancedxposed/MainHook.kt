@@ -61,12 +61,16 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 }
 
 fun inContext(lpparam: LoadPackageParam, f: (Application) -> Unit) {
-    val appClazz = XposedHelpers.findClass(lpparam.appInfo.className, lpparam.classLoader)
-    XposedBridge.hookMethod(appClazz.getMethod("onCreate"), object : XC_MethodHook() {
-        override fun beforeHookedMethod(param: MethodHookParam) {
-            val app = param.thisObject as Application
-            Utils.setContext(app)
-            f(app)
-        }
-    })
+    runCatching {
+        val appClazz = XposedHelpers.findClass(lpparam.appInfo.className, lpparam.classLoader)
+        XposedBridge.hookMethod(appClazz.getMethod("onCreate"), object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                val app = param.thisObject as Application
+                app.revanced.extension.shared.Utils.setContext(app)
+                f(app)
+            }
+        })
+    }.onFailure {
+        de.robv.android.xposed.XposedBridge.log("MainHook entrypoint failed: ${it.message}")
+    }
 }

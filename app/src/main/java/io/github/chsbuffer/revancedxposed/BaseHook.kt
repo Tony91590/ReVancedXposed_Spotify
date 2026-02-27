@@ -127,7 +127,11 @@ class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
     }
 
     fun saveCache() {
-        file.writeBytes(ProtoBuf.encodeToByteArray(pref))
+        runCatching {
+            file.writeBytes(ProtoBuf.encodeToByteArray(pref))
+        }.onFailure {
+            Logger.printDebug { "Failed to save cache: ${it.message}" }
+        }
     }
 }
 
@@ -243,7 +247,7 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
             cache.clearAll()
             cache.put("id", id)
             if (DEBUG) {
-                Utils.showToastLong("ReVanced Xposed is initializing, please wait...")
+                Logger.printDebug { "ReVanced Xposed is initializing, please wait..." }
             }
         }
     }
@@ -265,7 +269,7 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         val success = failedHooks.isEmpty()
         if (!success) {
             XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion()}")
-            Utils.showToastLong("Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}")
+            Logger.printDebug { "Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}" }
         }
     }
 
@@ -274,7 +278,7 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         if (DEBUG) {
             XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion()}")
             if (success) {
-                Utils.showToastLong("apply hooks success")
+                Logger.printDebug { "apply hooks success" }
             }
         }
     }
