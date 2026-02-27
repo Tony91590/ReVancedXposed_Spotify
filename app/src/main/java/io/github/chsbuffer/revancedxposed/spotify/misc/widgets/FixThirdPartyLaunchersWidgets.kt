@@ -4,5 +4,7 @@ import de.robv.android.xposed.XC_MethodReplacement
 import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
 
 fun SpotifyHook.FixThirdPartyLaunchersWidgets() {
-    ::canBindAppWidgetPermissionFingerprint.hookMethod(XC_MethodReplacement.returnConstant(true))
+    runCatching {
+        ::canBindAppWidgetPermissionFingerprint.hookMethod(XC_MethodReplacement.returnConstant(true))
+    }.onFailure { app.revanced.extension.shared.Logger.printDebug { "canBindAppWidgetPermissionFingerprint hook failed: ${it.message}" } }
 }

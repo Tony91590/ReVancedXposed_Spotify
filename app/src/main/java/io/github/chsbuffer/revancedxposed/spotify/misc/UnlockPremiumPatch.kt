@@ -19,39 +19,45 @@ fun SpotifyHook.UnlockPremium() {
     // Override the attributes map in the getter method's return value.
     // Creates a defensive copy with cloned attribute objects, leaving the original
     // protobuf data untouched to prevent server-side detection via state serialization.
-    ::productStateProtoFingerprint.hookMethod {
-        after { param ->
-            val result = param.result as? Map<String, *> ?: return@after
-            param.result = UnlockPremiumPatch.createOverriddenAttributesMap(result)
-        }
-    }
-
-    // Add the query parameter trackRows to show popular tracks in the artist page.
-    ::buildQueryParametersFingerprint.hookMethod {
-        after { param ->
-            val result = param.result
-            val FIELD = "checkDeviceCapability"
-            if (result.toString().contains("${FIELD}=")) {
-                param.result = XposedBridge.invokeOriginalMethod(
-                    param.method, param.thisObject, arrayOf(param.args[0], true)
-                )
+    runCatching {
+        ::productStateProtoFingerprint.hookMethod {
+            after { param ->
+                val result = param.result as? Map<String, *> ?: return@after
+                param.result = UnlockPremiumPatch.createOverriddenAttributesMap(result)
             }
         }
-    }
+    }.onFailure { Logger.printDebug { "productStateProtoFingerprint hook failed: ${it.message}" } }
+
+    // Add the query parameter trackRows to show popular tracks in the artist page.
+    runCatching {
+        ::buildQueryParametersFingerprint.hookMethod {
+            after { param ->
+                val result = param.result
+                val FIELD = "checkDeviceCapability"
+                if (result.toString().contains("${FIELD}=")) {
+                    param.result = XposedBridge.invokeOriginalMethod(
+                        param.method, param.thisObject, arrayOf(param.args[0], true)
+                    )
+                }
+            }
+        }
+    }.onFailure { Logger.printDebug { "buildQueryParametersFingerprint hook failed: ${it.message}" } }
 
     // Enable choosing a specific song/artist via Google Assistant.
-    ::contextFromJsonFingerprint.hookMethod {
-        fun removeStationString(field: Field, obj: Any) {
-            field.set(obj, UnlockPremiumPatch.removeStationString(field.get(obj) as String))
-        }
+    runCatching {
+        ::contextFromJsonFingerprint.hookMethod {
+            fun removeStationString(field: Field, obj: Any) {
+                field.set(obj, UnlockPremiumPatch.removeStationString(field.get(obj) as String))
+            }
 
-        after { param ->
-            val thiz = param.result
-            val clazz = param.result.javaClass
-            removeStationString(clazz.findField("uri"), thiz)
-            removeStationString(clazz.findField("url"), thiz)
+            after { param ->
+                val thiz = param.result
+                val clazz = param.result.javaClass
+                removeStationString(clazz.findField("uri"), thiz)
+                removeStationString(clazz.findField("url"), thiz)
+            }
         }
-    }
+    }.onFailure { Logger.printDebug { "contextFromJsonFingerprint hook failed: ${it.message}" } }
 
     // Disable forced shuffle when asking for an album/playlist via Google Assistant.
     // Wrapped in runCatching so a class name change doesn't crash the entire hook chain.
@@ -92,17 +98,21 @@ fun SpotifyHook.UnlockPremium() {
     // Remove ads sections from home.
     // Returns a filtered copy instead of mutating the original protobuf list,
     // preventing detection through protobuf integrity checks.
-    ::homeStructureGetSectionsFingerprint.hookMethod {
-        after { param ->
-            param.result = UnlockPremiumPatch.filterHomeSections(param.result as List<*>)
+    runCatching {
+        ::homeStructureGetSectionsFingerprint.hookMethod {
+            after { param ->
+                param.result = UnlockPremiumPatch.filterHomeSections(param.result as List<*>)
+            }
         }
-    }
+    }.onFailure { Logger.printDebug { "homeStructureGetSectionsFingerprint hook failed: ${it.message}" } }
     // Remove ads sections from browser.
-    ::browseStructureGetSectionsFingerprint.hookMethod {
-        after { param ->
-            param.result = UnlockPremiumPatch.filterBrowseSections(param.result as List<*>)
+    runCatching {
+        ::browseStructureGetSectionsFingerprint.hookMethod {
+            after { param ->
+                param.result = UnlockPremiumPatch.filterBrowseSections(param.result as List<*>)
+            }
         }
-    }
+    }.onFailure { Logger.printDebug { "browseStructureGetSectionsFingerprint hook failed: ${it.message}" } }
 
     // Remove pendragon (pop up ads) requests and return the errors instead.
     // No network request is made — the error value is extracted from the app's own
@@ -121,6 +131,11 @@ fun SpotifyHook.UnlockPremium() {
         }
     }
 
-    ::pendragonJsonFetchMessageRequestFingerprint.hookMethod(replaceFetchRequestSingleWithError)
-    ::pendragonJsonFetchMessageListRequestFingerprint.hookMethod(replaceFetchRequestSingleWithError)
+    runCatching {
+        ::pendragonJsonFetchMessageRequestFingerprint.hookMethod(replaceFetchRequestSingleWithError)
+    }.onFailure { Logger.printDebug { "pendragonJsonFetchMessageRequestFingerprint hook failed: ${it.message}" } }
+    
+    runCatching {
+        ::pendragonJsonFetchMessageListRequestFingerprint.hookMethod(replaceFetchRequestSingleWithError)
+    }.onFailure { Logger.printDebug { "pendragonJsonFetchMessageListRequestFingerprint hook failed: ${it.message}" } }
 }

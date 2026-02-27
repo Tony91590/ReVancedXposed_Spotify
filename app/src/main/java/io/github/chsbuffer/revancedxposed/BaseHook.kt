@@ -167,9 +167,18 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
                     if (libPath != null) {
                         val origFile = File(libPath)
                         if (origFile.exists()) {
+                            // Find and delete any previously extracted decoy libraries
+                            app.cacheDir.listFiles()?.forEach { file ->
+                                if (file.name.startsWith("libcrashlytics-ndk-") && file.name.endsWith(".so")) {
+                                    file.delete()
+                                }
+                            }
+                            
+                            // Generate a new decoy filename that blends in
                             val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-                            val randomName = "lib" + (1..12).map { chars.random() }.joinToString("") + ".so"
-                            val tempFile = File(app.cacheDir, randomName)
+                            val randomSuffix = (1..6).map { chars.random() }.joinToString("")
+                            val tempFile = File(app.cacheDir, "libcrashlytics-ndk-$randomSuffix.so")
+                            
                             try {
                                 origFile.inputStream().use { input ->
                                     tempFile.outputStream().use { output ->
@@ -181,9 +190,10 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
                                 return
                             } catch (e: Throwable) {
                                 Logger.printDebug { "Stealth load failed: ${e.message}" }
-                            } finally {
-                                tempFile.delete()
                             }
+                            // Do NOT delete the file in finally block.
+                            // Deleting a loaded .so file causes it to appear as "(deleted)" in /proc/self/maps,
+                            // which is a huge red flag for anti-tamper mechanisms.
                         }
                     }
                 }

@@ -192,26 +192,57 @@ public final class UnlockPremiumPatch {
     }
 
     /**
-     * Returns a new filtered list with ad sections removed.
-     * Does NOT mutate the original protobuf list, preventing detection through
-     * protobuf integrity checks or server-side serialization of the modified structure.
+     * Returns a dynamically proxied list with ad sections removed.
+     * The proxy implements exactly the interfaces of the original list.
+     * This prevents detection through protobuf integrity checks, server-side
+     * serialization of modified structures, or ClassCastExceptions.
      */
+    @SuppressWarnings("unchecked")
     private static <T> List<T> filterSections(
             List<T> sections,
             FeatureTypeIdProvider<T> featureTypeExtractor,
             List<Integer> idsToRemove
     ) {
         try {
-            List<T> filtered = new java.util.ArrayList<>(sections.size());
+            List<T> filteredData = new java.util.ArrayList<>(sections.size());
             for (T section : sections) {
                 int featureTypeId = featureTypeExtractor.getFeatureTypeId(section);
                 if (idsToRemove.contains(featureTypeId)) {
                     Logger.printInfo(() -> "Filtering section with feature type id " + featureTypeId);
                 } else {
-                    filtered.add(section);
+                    filteredData.add(section);
                 }
             }
-            return filtered;
+            
+            // Create a Dynamic Proxy that implements List (and any other interfaces the original list implements)
+            Class<?>[] interfaces = sections.getClass().getInterfaces();
+            if (interfaces.length == 0) {
+                interfaces = new Class<?>[] { List.class };
+            } else {
+                // Ensure java.util.List is in the array just in case
+                boolean hasList = false;
+                for (Class<?> i : interfaces) {
+                    if (i == List.class) { hasList = true; break; }
+                }
+                if (!hasList) {
+                    Class<?>[] newInterfaces = new Class<?>[interfaces.length + 1];
+                    System.arraycopy(interfaces, 0, newInterfaces, 0, interfaces.length);
+                    newInterfaces[interfaces.length] = List.class;
+                    interfaces = newInterfaces;
+                }
+            }
+            
+            return (List<T>) java.lang.reflect.Proxy.newProxyInstance(
+                    sections.getClass().getClassLoader(),
+                    interfaces,
+                    new java.lang.reflect.InvocationHandler() {
+                        @Override
+                        public Object invoke(Object proxy, java.lang.reflect.Method method, Object[] args) throws Throwable {
+                            // Forward all calls to our filtered internal ArrayList
+                            return method.invoke(filteredData, args);
+                        }
+                    }
+            );
         } catch (Exception ex) {
             Logger.printException(() -> "filterSections failure", ex);
             return sections;
