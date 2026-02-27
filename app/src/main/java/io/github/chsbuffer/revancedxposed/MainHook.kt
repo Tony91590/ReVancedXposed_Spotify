@@ -66,7 +66,7 @@ fun inContext(lpparam: LoadPackageParam, f: (Application) -> Unit) {
         XposedBridge.hookMethod(appClazz.getMethod("onCreate"), object : XC_MethodHook() {
             override fun beforeHookedMethod(param: MethodHookParam) {
                 val app = param.thisObject as Application
-                app.revanced.extension.shared.Utils.setContext(app)
+                Utils.setContext(app)
                 f(app)
             }
         })
