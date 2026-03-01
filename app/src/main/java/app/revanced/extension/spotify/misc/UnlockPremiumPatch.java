@@ -11,6 +11,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 
 
 import app.revanced.extension.shared.Logger;
@@ -73,41 +77,70 @@ public final class UnlockPremiumPatch {
             new OverrideAttribute("tablet-free", FALSE, false)
     );
     
-private static List<String> blockedUrls = List.of(
-    "audio-ads.spotify.com",
-    "adclick.g.doubleclick.net",
-    "pubads.g.doubleclick.net",
-    "spclient.wg.spotify.com",
-    "heads-ec.spotify.com",
-    "ads-fa.spotify.com",
-    "adeventtracker.spotify.com",
-    "pagead46.l.doubleclick.net",
-    "securepubads.g.doubleclick.net",
-    "googleads.g.doubleclick.net",
-    "www.googletagservices.com",
-    "www.googleadservices.com",
-    "tpc.googlesyndication.com",
-    "pagead2.googlesyndication.com",
-    "stats.g.doubleclick.net",
-    "ads.g.doubleclick.net",
-    "googlesyndication.com",
-    "s0.2mdn.net",
-    "static.doubleclick.net",
-    "crashlytics.com",
-    "metrics.spotify.com",
-    "log.spotify.com",
-    "google-analytics.com",
-    "ssl.google-analytics.com",
-    "analytics.google.com",
-    "ads.yahoo.com",
-    "ads-twitter.com",
-    "ads.linkedin.com",
-    "ads.facebook.com",
-    "secure.adnxs.com",
-    "ib.adnxs.com",
-    "adservice.google.com",
-    "adservice.google.co"
-);
+
+public class HttpProxy {
+    public static void main(String[] args) throws Exception {
+        String[] blockedUrls = {
+            "audio-ads.spotify.com",
+            "adclick.g.doubleclick.net",
+            "pubads.g.doubleclick.net",
+            "spclient.wg.spotify.com",
+            "heads-ec.spotify.com",
+            "ads-fa.spotify.com",
+            "adeventtracker.spotify.com",
+            "pagead46.l.doubleclick.net",
+            "securepubads.g.doubleclick.net",
+            "googleads.g.doubleclick.net",
+            "www.googletagservices.com",
+            "www.googleadservices.com",
+            "tpc.googlesyndication.com",
+            "pagead2.googlesyndication.com",
+            "stats.g.doubleclick.net",
+            "ads.g.doubleclick.net",
+            "googlesyndication.com",
+            "s0.2mdn.net",
+            "static.doubleclick.net",
+            "crashlytics.com",
+            "metrics.spotify.com",
+            "log.spotify.com",
+            "google-analytics.com",
+            "ssl.google-analytics.com",
+            "analytics.google.com",
+            "ads.yahoo.com",
+            "ads-twitter.com",
+            "ads.linkedin.com",
+            "ads.facebook.com",
+            "secure.adnxs.com",
+            "ib.adnxs.com",
+            "adservice.google.com",
+            "adservice.google.co"
+        };
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .addInterceptor(chain -> {
+                    Request request = chain.request();
+                    String url = request.url().toString();
+                    for (String blockedUrl : blockedUrls) {
+                        if (url.contains(blockedUrl)) {
+                            return new Response.Builder()
+                                    .code(404)
+                                    .message("Not Found")
+                                    .build();
+                        }
+                    }
+                    return chain.proceed(request);
+                })
+                .build();
+
+        Request request = new Request.Builder()
+                .url("https://www.spotify.com")
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            System.out.println(response.body().string());
+        }
+    }
+}
     /**
      * A list of home sections feature types ids which should be removed. These ids match the ones from the protobuf
      * response which delivers home sections.
