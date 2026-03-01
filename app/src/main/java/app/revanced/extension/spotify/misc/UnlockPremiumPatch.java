@@ -72,6 +72,7 @@ public final class UnlockPremiumPatch {
             // Removes the premium button in the nav-bar for tablet users.
             new OverrideAttribute("tablet-free", FALSE, false)
     );
+    
 private static List<String> blockedUrls = List.of(
     "audio-ak-spotify-com.akamaized.net",
     "analytics.spotify.com",
