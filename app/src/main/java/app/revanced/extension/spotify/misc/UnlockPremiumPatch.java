@@ -74,42 +74,20 @@ public final class UnlockPremiumPatch {
     );
     
 private static List<String> blockedUrls = List.of(
-    "audio-ak-spotify-com.akamaized.net",
-    "analytics.spotify.com",
-    "adstats.spotify.com",
-    "adeventtracker.spotify.com",
-    "segment-data-us-east.zqtk.net",
-    "live.ravelin.click",
-    "weblb-wg.gslb.spotify.com",
-    "tracking.spotify.com",
-    "redirect.spotify.net",
-    "log.spotify.com",
-    "firebaseinstallations.googleapis.com",
-    "firebase-settings.crashlytics.com",
-    "crashdump.spotify.com",
-    "cdn.branch.io",
-    "api2.branch.io",
-    "sponsored-recommendations.spotify.com",
-    "pagead2.googlesyndication.com",
-    "bs.serving-sys.com",
-    "bounceexchange.com",
-    "sb.scorecardresearch.com",
-    "b.scorecardresearch.com",
-    "audio2.spotify.com",
-    "desktop.spotify.com",
-    "ads.spotify.com",
-    "spclient.wg.spotify.com",
     "audio-ads.spotify.com",
     "adclick.g.doubleclick.net",
     "pubads.g.doubleclick.net",
+    "spclient.wg.spotify.com",
     "heads-ec.spotify.com",
     "ads-fa.spotify.com",
+    "adeventtracker.spotify.com",
     "pagead46.l.doubleclick.net",
     "securepubads.g.doubleclick.net",
     "googleads.g.doubleclick.net",
     "www.googletagservices.com",
     "www.googleadservices.com",
     "tpc.googlesyndication.com",
+    "pagead2.googlesyndication.com",
     "stats.g.doubleclick.net",
     "ads.g.doubleclick.net",
     "googlesyndication.com",
@@ -117,6 +95,7 @@ private static List<String> blockedUrls = List.of(
     "static.doubleclick.net",
     "crashlytics.com",
     "metrics.spotify.com",
+    "log.spotify.com",
     "google-analytics.com",
     "ssl.google-analytics.com",
     "analytics.google.com",
@@ -129,7 +108,6 @@ private static List<String> blockedUrls = List.of(
     "adservice.google.com",
     "adservice.google.co"
 );
-
     /**
      * A list of home sections feature types ids which should be removed. These ids match the ones from the protobuf
      * response which delivers home sections.
