@@ -17,7 +17,60 @@ import de.robv.android.xposed.XposedHelpers;
 
 @SuppressWarnings("unused")
 public final class UnlockPremiumPatch {
+    // ...
 
+    private static List<String> blockedUrls;
+
+    public static void overrideAttributes(Map<String, ?> attributes) {
+        // ...
+        try {
+            AssetManager assetManager = app.revanced.extension.shared.Application.getContext().getAssets();
+            InputStream inputStream = assetManager.open("urls.txt");
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            blockedUrls = reader.lines().collect(Collectors.toList());
+            reader.close();
+        } catch (Exception ex) {
+            Logger.printException(() -> "Failed to load blocked URLs", ex);
+        }
+        // ...
+    }
+
+    private static boolean isUrlBlocked(String url) {
+        return blockedUrls != null && blockedUrls.contains(url);
+    }
+
+    public static void removeHomeSections(List<?> sections) {
+        // ...
+        removeSections(
+            sections,
+            section -> {
+                String url = XposedHelpers.getObjectField(section, "url");
+                if (isUrlBlocked(url)) {
+                    Logger.printInfo(() -> "Blocking URL: " + url);
+                    return -1; // Marquer l'URL comme bloquée
+                }
+                return XposedHelpers.getIntField(section, "featureTypeCase_");
+            },
+            REMOVED_HOME_SECTIONS
+        );
+    }
+
+    public static void removeBrowseSections(List<?> sections) {
+        // ...
+        removeSections(
+            sections,
+            section -> {
+                String url = XposedHelpers.getObjectField(section, "url");
+                if (isUrlBlocked(url)) {
+                    Logger.printInfo(() -> "Blocking URL: " + url);
+                    return -1; // Marquer l'URL comme bloquée
+                }
+                return XposedHelpers.getIntField(section, "sectionTypeCase_");
+            },
+            REMOVED_BROWSE_SECTIONS
+        );
+    }
+}
     private static class OverrideAttribute {
         /**
          * Account attribute key.
