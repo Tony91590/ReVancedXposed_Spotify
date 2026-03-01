@@ -72,32 +72,33 @@ public final class UnlockPremiumPatch {
             // Removes the premium button in the nav-bar for tablet users.
             new OverrideAttribute("tablet-free", FALSE, false)
     );
-        private static List<String> blockedUrls = List.of(
-            "audio-ak-spotify-com.akamaized.net",
-            "analytics.spotify.com",
-            "adstats.spotify.com",
-            "adeventtracker.spotify.com",
-            "segment-data-us-east.zqtk.net",
-            "live.ravelin.click",
-            "weblb-wg.gslb.spotify.com",
-            "tracking.spotify.com",
-            "redirect.spotify.net",
-            "firebaseinstallations.googleapis.com",
-            "firebase-settings.crashlytics.com",
-            "crashdump.spotify.com",
-            "cdn.branch.io",
-            "api2.branch.io",
-            "sponsored-recommendations.spotify.com",
-            "pagead2.googlesyndication.com",
-            "bs.serving-sys.com",
-            "bounceexchange.com",
-            "sb.scorecardresearch.com",
-            "b.scorecardresearch.com",
-            "audio2.spotify.com",
-            "desktop.spotify.com",
-            "ads.spotify.com",
-            "spclient.wg.spotify.com"
-    );
+private static List<String> blockedUrls = List.of(
+    "audio-ak-spotify-com.akamaized.net",
+    "analytics.spotify.com",
+    "adstats.spotify.com",
+    "adeventtracker.spotify.com",
+    "segment-data-us-east.zqtk.net",
+    "live.ravelin.click",
+    "weblb-wg.gslb.spotify.com",
+    "tracking.spotify.com",
+    "redirect.spotify.net",
+    "log.spotify.com",
+    "firebaseinstallations.googleapis.com",
+    "firebase-settings.crashlytics.com",
+    "crashdump.spotify.com",
+    "cdn.branch.io",
+    "api2.branch.io",
+    "sponsored-recommendations.spotify.com",
+    "pagead2.googlesyndication.com",
+    "bs.serving-sys.com",
+    "bounceexchange.com",
+    "sb.scorecardresearch.com",
+    "b.scorecardresearch.com",
+    "audio2.spotify.com",
+    "desktop.spotify.com",
+    "ads.spotify.com",
+    "spclient.wg.spotify.com"
+);
 
     /**
      * A list of home sections feature types ids which should be removed. These ids match the ones from the protobuf
