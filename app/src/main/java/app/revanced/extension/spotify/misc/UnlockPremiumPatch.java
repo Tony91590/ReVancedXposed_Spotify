@@ -82,7 +82,6 @@ public final class UnlockPremiumPatch {
             "weblb-wg.gslb.spotify.com",
             "tracking.spotify.com",
             "redirect.spotify.net",
-            "log.spotify.com",
             "firebaseinstallations.googleapis.com",
             "firebase-settings.crashlytics.com",
             "crashdump.spotify.com",
