@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 
 import app.revanced.extension.shared.Logger;
@@ -150,11 +149,6 @@ public final class UnlockPremiumPatch {
             Logger.printException(() -> "overrideAttributes failure", ex);
         }
     }
-private static boolean isUrlBlocked(String url) {
-        return blockedUrls.contains(url);
-    }
-
-}
 
     /**
      * Injection point. Remove station data from Google Assistant URI.
