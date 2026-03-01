@@ -97,7 +97,7 @@ private static List<String> blockedUrls = List.of(
     "b.scorecardresearch.com",
     "audio2.spotify.com",
     "desktop.spotify.com",
-    "ads.spotify.com",
+    "ads.spotify.com"
 );
 
     /**
