@@ -1,1 +1,40 @@
+127.0.0.1 localhost
+::1 localhost
+
+# Fichier hosts pour bloquer les publicités et les trackers sur Spotify
+
+127.0.0.1 audio-ak-spotify-com.akamaized.net
+127.0.0.1 analytics.spotify.com
+127.0.0.1 adstats.spotify.com
+127.0.0.1 adeventtracker.spotify.com
+127.0.0.1 segment-data-us-east.zqtk.net
+127.0.0.1 live.ravelin.click
+127.0.0.1 weblb-wg.gslb.spotify.com
+127.0.0.1 tracking.spotify.com
+127.0.0.1 redirect.spotify.net
+127.0.0.1 log.spotify.com
+127.0.0.1 firebaseinstallations.googleapis.com
+127.0.0.1 firebase-settings.crashlytics.com
+127.0.0.1 crashdump.spotify.com
+127.0.0.1 cdn.branch.io
+127.0.0.1 api2.branch.io
+127.0.0.1 sponsored-recommendations.spotify.com
+127.0.0.1 pagead2.googlesyndication.com
+127.0.0.1 bs.serving-sys.com
+127.0.0.1 bounceexchange.com
+127.0.0.1 sb.scorecardresearch.com
+127.0.0.1 b.scorecardresearch.com
+127.0.0.1 audio2.spotify.com
+127.0.0.1 desktop.spotify.com
+127.0.0.1 ads.spotify.com
+127.0.0.1 spclient.wg.spotify.com
+127.0.0.1 musique.pub
+127.0.0.1 pubsonmusique.com
+127.0.0.1 adserver.pub
+127.0.0.1 ads.musique.pub
+127.0.0.1 track.pubsonmusique.com
+127.0.0.1 analytics.musique.pub
+127.0.0.1 cdn.musique.pub
+
+# Fin du fichier hosts
 
