@@ -1,4 +1,7 @@
-/* * Custom changes: * Wipe stubbed types: REMOVED_HOME_SECTIONS, overrideAttributes, removeHomeSections * */ 
+/*
+ * Custom changes:
+ * Wipe stubbed types: REMOVED_HOME_SECTIONS, overrideAttributes, removeHomeSections
+ * */
 package app.revanced.extension.spotify.misc;
 
 import static java.lang.Boolean.FALSE;
@@ -14,6 +17,7 @@ import de.robv.android.xposed.XposedHelpers;
 
 @SuppressWarnings("unused")
 public final class UnlockPremiumPatch {
+
     private static class OverrideAttribute {
         /**
          * Account attribute key.
@@ -43,23 +47,31 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
-            new OverrideAttribute("ads", FALSE), // Works along on-demand, allows playing any song without restriction.
-            new OverrideAttribute("player-license", "on-demand"), // Disables shuffle being initially enabled when first playing a playlist.
-            new OverrideAttribute("shuffle", FALSE), // Allows playing any song on-demand, without a shuffled order.
-            new OverrideAttribute("on-demand", TRUE), // Make sure playing songs is not disabled remotely and playlists show up.
-            new OverrideAttribute("streaming", TRUE), // Allows adding songs to queue and removes the smart shuffle mode restriction,
+            new OverrideAttribute("ads", FALSE),
+            // Works along on-demand, allows playing any song without restriction.
+            new OverrideAttribute("player-license", "on-demand"),
+            // Disables shuffle being initially enabled when first playing a playlist.
+            new OverrideAttribute("shuffle", FALSE),
+            // Allows playing any song on-demand, without a shuffled order.
+            new OverrideAttribute("on-demand", TRUE),
+            // Make sure playing songs is not disabled remotely and playlists show up.
+            new OverrideAttribute("streaming", TRUE),
+            // Allows adding songs to queue and removes the smart shuffle mode restriction,
             // allowing to pick any of the other modes. Flag is not present in legacy app target.
-            new OverrideAttribute("pick-and-shuffle", FALSE), // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled
+            new OverrideAttribute("pick-and-shuffle", FALSE),
+            // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled
             // and breaks the player when other patches are applied.
-            new OverrideAttribute("streaming-rules", ""), // Enables premium UI in settings and removes the premium button in the nav-bar.
-            new OverrideAttribute("nft-disabled", "1"), // Enable Spotify Car Thing hardware device.
+            new OverrideAttribute("streaming-rules", ""),
+            // Enables premium UI in settings and removes the premium button in the nav-bar.
+            new OverrideAttribute("nft-disabled", "1"),
+            // Enable Spotify Car Thing hardware device.
             // Device is discontinued and no longer works with the latest releases,
             // but it might still work with older app targets.
-            new OverrideAttribute("can_use_superbird", TRUE, false), // Removes the premium button in the nav-bar for tablet users.
+            new OverrideAttribute("can_use_superbird", TRUE, false),
+            // Removes the premium button in the nav-bar for tablet users.
             new OverrideAttribute("tablet-free", FALSE, false)
     );
-
-    private static List<String> blockedUrls = List.of(
+        private static List<String> blockedUrls = List.of(
             "audio-ak-spotify-com.akamaized.net",
             "analytics.spotify.com",
             "adstats.spotify.com",
@@ -111,31 +123,35 @@ public final class UnlockPremiumPatch {
         try {
             for (OverrideAttribute override : PREMIUM_OVERRIDES) {
                 var attribute = attributes.get(override.key);
+
                 if (attribute == null) {
                     if (override.isExpected) {
                         Logger.printException(() -> "Attribute " + override.key + " expected but not found");
                     }
                     continue;
                 }
+
                 Object overrideValue = override.overrideValue;
                 Object originalValue;
                 originalValue = XposedHelpers.getObjectField(attribute, "value_");
+
                 if (overrideValue.equals(originalValue)) {
                     continue;
                 }
-                Logger.printInfo(() -> "Overriding account attribute " + override.key + " from " + originalValue + " to " + overrideValue);
+
+                Logger.printInfo(() -> "Overriding account attribute " + override.key +
+                        " from " + originalValue + " to " + overrideValue);
+
                 XposedHelpers.setObjectField(attribute, "value_", overrideValue);
             }
         } catch (Exception ex) {
             Logger.printException(() -> "overrideAttributes failure", ex);
         }
     }
-
-    private static boolean isUrlBlocked(String url) {
+private static boolean isUrlBlocked(String url) {
         return blockedUrls.contains(url);
     }
 
-    // ... (le reste du code reste inchangé)
 }
 
     /**
