@@ -1,9 +1,3 @@
-/*
- * Custom changes:
- * V's Custom Attributes injected into the Defensive Unsafe Clone method.
- * Non-destructive attribute override: clones AccountAttribute objects instead of mutating in-place
- * V's MASTER DUAL-FORENSICS DUMPER: Harvests both the Server's Reality and V's Shadow Map.
- * */
 package app.revanced.extension.spotify.misc;
 
 import static java.lang.Boolean.FALSE;
@@ -23,7 +17,6 @@ import de.robv.android.xposed.XposedHelpers;
 @SuppressWarnings("unused")
 public final class UnlockPremiumPatch {
 
-    // V'S DUAL MEMORY BANKS
     private static final Map<String, String> SEEN_ORIGINAL_STATES = new HashMap<>();
     private static final Map<String, String> SEEN_SHADOW_STATES = new HashMap<>();
     private static final Object FILE_LOCK = new Object();
@@ -45,7 +38,7 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
-            // --- CORE FUNCTIONALITY ---
+            // Core functionality
             new OverrideAttribute("player-license", "on-demand"),
             new OverrideAttribute("shuffle", FALSE),
             new OverrideAttribute("on-demand", TRUE),
@@ -54,33 +47,23 @@ public final class UnlockPremiumPatch {
             new OverrideAttribute("streaming-rules", ""),
             new OverrideAttribute("nft-disabled", "1"),
 
-            // 🎯 --- V'S AGGRESSIVE NEW HITLIST --- 🎯
+            // Extended overrides
             new OverrideAttribute("smart-shuffle", "AVAILABLE", false),
             new OverrideAttribute("ad-formats-preroll-video", FALSE, false),
-            // new OverrideAttribute("estimated-age", 24, false),
             new OverrideAttribute("has-audiobooks-subscription", TRUE, false),
             new OverrideAttribute("social-session-free-tier", FALSE, false),
             new OverrideAttribute("jam-social-session", "PREMIUM", false),
-            //new OverrideAttribute("can-block-content", 0, false),
             new OverrideAttribute("parrot", "enabled", false),
-            // new OverrideAttribute("is_email_verified", TRUE, false),
-            //new OverrideAttribute("offline", TRUE, false),
-            // new OverrideAttribute("app-developer", 1, false),
             new OverrideAttribute("on-demand-trial-in-progress", TRUE, false),
             new OverrideAttribute("ugc-abuse-report", FALSE, false),
             new OverrideAttribute("offline-backup", "ENABLED", false),
             new OverrideAttribute("lyrics-offline", TRUE, false),
 
-            // 🚀 --- THE PERFORMANCE & UI OVERRIDES --- 🚀
+            // UI and performance tweaks
             new OverrideAttribute("is-tuna", TRUE, false),
             new OverrideAttribute("is-seadragon", TRUE, false),
-            //new OverrideAttribute("prefetch-keys", "10", false), // Maxed out from 1
-            //new OverrideAttribute("prefetch-window-max", 20, false), // Maxed out from 2
 
-            // 💀 --- THE ANTI-TAMPER SPOOF --- 💀
-            // new OverrideAttribute("at-signal", "0,deadbeef00", false), // Force-feeding them a dead hash
-
-            // --- V'S CUSTOM DEEP CORE ATTRIBUTES ---
+            // Deep attribute overrides
             new OverrideAttribute("audio-quality", "2", false),
             new OverrideAttribute("social-session", TRUE, false),
             new OverrideAttribute("obfuscate-restricted-tracks", FALSE, false),
@@ -100,21 +83,21 @@ public final class UnlockPremiumPatch {
     );
 
     /**
-     * V'S DUAL FORENSIC DUMPER
-     * Takes a label to distinguish between the Server's map and our Shadow map.
+     * Dumps attribute state to a forensics file for debugging purposes.
+     * Tracks changes between invocations to avoid redundant writes.
      */
     private static void dumpForensics(String mapLabel, Map<String, ?> map, Map<String, String> memoryBank) {
         try {
             android.content.Context ctx = app.revanced.extension.shared.Utils.getContext();
             if (ctx == null) return;
 
-            java.io.File file = new java.io.File(ctx.getExternalFilesDir(null), "v_config_forensics.txt");
+            java.io.File file = new java.io.File(ctx.getExternalFilesDir(null), "config_forensics.txt");
             boolean changesFound = false;
             StringBuilder logBuilder = new StringBuilder();
 
             synchronized (FILE_LOCK) {
                 if (!file.exists()) {
-                    logBuilder.append("=== V'S DUAL CONFIG FORENSICS DUMP ===\n\n");
+                    logBuilder.append("=== CONFIG FORENSICS DUMP ===\n\n");
                     changesFound = true;
                 }
 
@@ -169,12 +152,18 @@ public final class UnlockPremiumPatch {
                     fos.close();
                 }
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            // Silently fail — forensics should never crash the app.
+        }
     }
 
+    /**
+     * Creates a modified copy of the account attributes map with premium overrides applied.
+     * Clones individual attribute objects to avoid mutating the originals.
+     */
     @SuppressWarnings("unchecked")
     public static Map<String, ?> createOverriddenAttributesMap(Map<String, ?> originalMap) {
-        // 🚨 DUMP 1: THE REALITY (What the server sent) 🚨
+        // Dump the original server-side attributes for debugging
         if (originalMap != null && !originalMap.isEmpty()) {
             dumpForensics("SERVER", originalMap, SEEN_ORIGINAL_STATES);
         }
@@ -203,27 +192,28 @@ public final class UnlockPremiumPatch {
                 result.put(override.key, clonedAttribute);
             }
 
-            // 🚨 DUMP 2: THE ILLUSION (What we are feeding the app) 🚨
-            dumpForensics("SHADOW", result, SEEN_SHADOW_STATES);
+            // Dump the modified attributes for comparison
+            dumpForensics("PATCHED", result, SEEN_SHADOW_STATES);
 
-            // THE SELF-WRITING JAVA HONEYPOT MAP
+            // Wrap the result to log when specific keys are accessed (useful for tracing ad logic)
             return new java.util.LinkedHashMap<String, Object>(result) {
                 @Override
                 public Object get(Object key) {
                     if ("ads".equals(key)) {
                         try {
                             StackTraceElement[] trace = Thread.currentThread().getStackTrace();
-                            StringBuilder sb = new StringBuilder("\n\n🍯 [JAVA HONEYPOT] 'ads' WAS QUERIED!\n🔎 --- JADX DOSSIER ---\n");
+                            StringBuilder sb = new StringBuilder("\n\n[TRACE] 'ads' key was accessed\n--- Stack trace ---\n");
                             int count = 0;
 
                             for (StackTraceElement element : trace) {
                                 String cName = element.getClassName();
-                                if (cName.contains("Xposed") || cName.contains("UnlockPremiumPatch") || cName.startsWith("java.") || cName.startsWith("android.")) {
+                                if (cName.contains("Xposed") || cName.contains("UnlockPremiumPatch")
+                                        || cName.startsWith("java.") || cName.startsWith("android.")) {
                                     continue;
                                 }
 
                                 if (count == 0) {
-                                    sb.append("🎯 CALLER: ").append(cName).append(".").append(element.getMethodName())
+                                    sb.append("  CALLER: ").append(cName).append(".").append(element.getMethodName())
                                             .append(" (Line: ").append(element.getLineNumber()).append(")\n");
                                 } else {
                                     sb.append("   -> ").append(cName).append(".").append(element.getMethodName())
@@ -236,12 +226,14 @@ public final class UnlockPremiumPatch {
 
                             android.content.Context ctx = app.revanced.extension.shared.Utils.getContext();
                             if (ctx != null) {
-                                java.io.File file = new java.io.File(ctx.getExternalFilesDir(null), "v_java_honeypot.txt");
+                                java.io.File file = new java.io.File(ctx.getExternalFilesDir(null), "ads_access_trace.txt");
                                 java.io.FileOutputStream fos = new java.io.FileOutputStream(file, true);
                                 fos.write(sb.toString().getBytes("UTF-8"));
                                 fos.close();
                             }
-                        } catch (Exception e) {}
+                        } catch (Exception e) {
+                            // Tracing should never cause a crash.
+                        }
                     }
                     return super.get(key);
                 }
@@ -255,6 +247,10 @@ public final class UnlockPremiumPatch {
     private static volatile Object unsafeInstance;
     private static volatile java.lang.reflect.Method allocateInstanceMethod;
 
+    /**
+     * Creates a shallow clone of the given object using sun.misc.Unsafe
+     * to allocate without invoking the constructor, then copies all instance fields.
+     */
     private static Object shallowCloneObject(Object original) {
         try {
             if (unsafeInstance == null) {
@@ -311,7 +307,9 @@ public final class UnlockPremiumPatch {
                     iterator.remove();
                 }
             }
-        } catch (Exception ex) {}
+        } catch (Exception ex) {
+            // Silently handle — section removal is best-effort.
+        }
     }
 
     public static void removeHomeSections(List<?> sections) {
