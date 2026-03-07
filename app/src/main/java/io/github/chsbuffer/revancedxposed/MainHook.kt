@@ -43,15 +43,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
     }
 
     private fun isReVancedPatched(lpparam: LoadPackageParam): Boolean {
-        return runCatching {
-            lpparam.classLoader.loadClass("app.revanced.extension.shared.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.extension.shared.utils.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.integrations.shared.Utils")
-        }.isSuccess || runCatching {
-            lpparam.classLoader.loadClass("app.revanced.integrations.shared.utils.Utils")
-        }.isSuccess
+        return runCatching { lpparam.classLoader.loadClass("app.revanced.extension.shared.Utils") }.isSuccess ||
+                runCatching { lpparam.classLoader.loadClass("app.revanced.extension.shared.utils.Utils") }.isSuccess ||
+                runCatching { lpparam.classLoader.loadClass("app.revanced.integrations.shared.Utils") }.isSuccess ||
+                runCatching { lpparam.classLoader.loadClass("app.revanced.integrations.shared.utils.Utils") }.isSuccess
     }
 
     override fun initZygote(startupParam: StartupParam) {
