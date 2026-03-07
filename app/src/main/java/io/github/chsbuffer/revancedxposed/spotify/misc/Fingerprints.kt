@@ -11,6 +11,11 @@ import io.github.chsbuffer.revancedxposed.strings
 import org.luckypray.dexkit.query.enums.StringMatchType
 import org.luckypray.dexkit.query.enums.UsingType
 import io.github.chsbuffer.revancedxposed.returns
+import io.github.chsbuffer.revancedxposed.FindMethodListFunc
+import io.github.chsbuffer.revancedxposed.FindClassFunc
+import org.luckypray.dexkit.DexKitBridge
+import kotlin.collections.filter
+
 
 val productStateProtoFingerprint = fingerprint {
     returns("Ljava/util/Map;")
@@ -109,40 +114,39 @@ val pendragonJsonFetchMessageListRequestFingerprint = findMethodDirect {
 }
 
 // --- NEW RAW DEXKIT FINGERPRINTS ---
-val protobufMessageFingerprint: FindMethodListFunc = { bridge ->
+
+val protobufMessageFingerprint: FindMethodListFunc = { bridge: DexKitBridge ->
     // 1. Find classes that contain Protobuf strings
     val protoClasses = bridge.findClass {
         matcher { usingStrings("Protocol message") }
     }
 
     // 2. Extract only the methods that return a byte array
-    // Depending on the DexKit version, byte arrays are named "byte[]" or "[B"
-    protoClasses.flatMap { it.methods }.filter {
-        it.returnType?.name == "byte[]" || it.returnType?.name == "[B"
+    protoClasses.flatMap { it.methods }.filter { method ->
+        method.returnType?.name == "byte[]" || method.returnType?.name == "[B"
     }
 }
 
-val adManagerFingerprint: FindClassFunc = { bridge ->
+val adManagerFingerprint: FindClassFunc = { bridge: DexKitBridge ->
     bridge.findClass {
         searchPackages("com.spotify")
         matcher {
-            // Broadened the search terms to catch newer ad manager iterations
             usingStrings("spotify:ad:", "ad_request", "ad_playback", "sponsored_context")
         }
     }.firstOrNull() ?: throw RuntimeException("AdManager Strings Not Found")
 }
 
-    val adActivityFingerprint: FindClassFunc = { bridge ->
-        bridge.findClass {
-            matcher {
-                superClass("android.app.Activity")
-                // Broadened to catch any activity referencing ad layouts or promo UI
-                usingStrings("ad_companion", "video_ad", "sponsored_session", "advertisement", "slate_ad")
-            }
-        }.firstOrNull() ?: throw RuntimeException("AdActivity Strings Not Found")
-    }
-val productStateImplFingerprint: FindClassFunc = { bridge ->
+val adActivityFingerprint: FindClassFunc = { bridge: DexKitBridge ->
+    bridge.findClass {
+        matcher {
+            superClass("android.app.Activity")
+            usingStrings("ad_companion", "video_ad", "sponsored_session", "advertisement", "slate_ad")
+        }
+    }.firstOrNull() ?: throw RuntimeException("AdActivity Strings Not Found")
+}
+
+val productStateImplFingerprint: FindClassFunc = { bridge: DexKitBridge ->
     bridge.findClass {
         matcher { usingStrings("streaming-rules", "ads") }
-    }.firstOrNull() ?: throw RuntimeException("ProductState Strings Not Found") // Removed ?.classData
+    }.firstOrNull() ?: throw RuntimeException("ProductState Strings Not Found")
 }
