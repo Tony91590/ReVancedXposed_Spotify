@@ -1,4 +1,4 @@
-# Contributing to ReVancedXposed Spotify
+# Contributing to RVX Spotify
 
 Thank you for your interest in contributing! This is a community-maintained fork of the original [chsbuffer/ReVancedXposed_Spotify](https://github.com/chsbuffer/ReVancedXposed_Spotify), which has been archived. Contributions of all kinds are welcome.
 
