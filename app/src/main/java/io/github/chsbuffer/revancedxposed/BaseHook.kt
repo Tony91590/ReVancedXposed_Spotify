@@ -150,6 +150,56 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         DexKitCacheBridge.create("", lpparam.appInfo.sourceDir)
     }
 
+    fun getDexKit() = dexkit
+
+    /**
+     * Loads a native library from a temporary file with a randomized name,
+     * preventing detection by apps scanning /proc/self/maps for known library names like "dexkit".
+     */
+    private fun loadNativeLibrary(libName: String) {
+        synchronized(nativeLibLock) {
+            if (nativeLibLoaded) return
+            try {
+                val moduleClassLoader = BaseHook::class.java.classLoader
+                if (moduleClassLoader is BaseDexClassLoader) {
+                    val libPath = moduleClassLoader.findLibrary(libName)
+                    if (libPath != null) {
+                        val origFile = File(libPath)
+                        if (origFile.exists()) {
+                            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+                            val randomName = "lib" + (1..12).map { chars.random() }.joinToString("") + ".so"
+                            val tempFile = File(app.cacheDir, randomName)
+                            try {
+                                origFile.inputStream().use { input ->
+                                    tempFile.outputStream().use { output ->
+                                        input.copyTo(output)
+                                    }
+                                }
+                                System.load(tempFile.absolutePath)
+                                nativeLibLoaded = true
+                                return
+                            } catch (e: Throwable) {
+                                Logger.printDebug { "Stealth load failed: ${e.message}" }
+                            } finally {
+                                tempFile.delete()
+                            }
+                        }
+                    }
+                }
+            } catch (e: Throwable) {
+                Logger.printDebug { "Native library path discovery failed: ${e.message}" }
+            }
+            // Fallback to standard loading
+            System.loadLibrary(libName)
+            nativeLibLoaded = true
+        }
+    }
+
+    companion object {
+        private var nativeLibLoaded = false
+        private val nativeLibLock = Any()
+    }
+
     override fun Hook() {
         val t = measureTimeMillis {
             tryLoadCache()

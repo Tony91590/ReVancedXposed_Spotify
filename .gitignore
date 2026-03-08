@@ -19,3 +19,7 @@ local.properties
 *.jks
 *.keystore
 signing.properties
+Spotify_v9.1.24.1739(138424205)_src/*
+prompts.txt
+ProjectReVancedXposed.txt
+README.md-StandOut.txt
