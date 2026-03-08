@@ -153,6 +153,8 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         DexKitCacheBridge.create("", lpparam.appInfo.sourceDir)
     }
 
+    fun getDexKit() = dexkit
+
     /**
      * Loads a native library from a temporary file with a randomized name,
      * preventing detection by apps scanning /proc/self/maps for known library names like "dexkit".

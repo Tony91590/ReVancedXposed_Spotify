@@ -50,8 +50,8 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
-            // Disables player and app ads.
-            new OverrideAttribute("ads", FALSE),
+            
+
             // Works along on-demand, allows playing any song without restriction.
             new OverrideAttribute("player-license", "on-demand"),
             // Disables shuffle being initially enabled when first playing a playlist.

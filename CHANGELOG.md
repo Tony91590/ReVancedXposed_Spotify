@@ -6,6 +6,19 @@ This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/
 
 ---
 
+## [v260308] - 2026-03-08
+
+### Added
+- **DNS-level ad blocking** — blocks all Spotify ad-serving domains directly within the module by sinkholing DNS resolution to `127.0.0.1`. This is the same proven technique used by AdGuard DNS and Pi-hole, but runs entirely inside the Xposed module with no external DNS configuration required. Blocks 25 ad-related domains including `ads.spotify.com`, `spclient.wg.spotify.com`, `analytics.spotify.com`, sponsored content endpoints, and third-party tracking services.
+- **DNS Domain Discovery Mode** — a built-in diagnostic tool for finding new ad domains when Spotify changes them. Toggle `DNS_DISCOVERY_MODE = true` in `InterceptAds.kt`, rebuild, and run `adb logcat -s AD_DIAG | grep "DNS_LOG"` to log every domain Spotify resolves. Identify new ad domains and add them to the blocklist.
+- **Multi-layer defense-in-depth** — in addition to DNS blocking, the module hooks OkHttp's `Dns.SYSTEM.lookup()` and `URL.openConnection()` to cover all network paths. Also retains player-state sanitization (`PlayerState.Builder.adBreakContext` → skip, `deserializeAdBreakContext` → null), ad track URI filtering (`spotify:ad:` tracks removed from player/queue state), and ad display suppression (`DisplayAdActivity` and `InAppBrowserActivity` → `finish()` on creation).
+
+### Design Notes
+- The `ads` account attribute is intentionally **not** overridden. Setting `ads=FALSE` triggers Spotify's server-side dual-sync detection, causing forced logouts every 60-120 seconds. The DNS blocking approach avoids this entirely by operating at the network layer rather than modifying account state.
+- The ad domain blocklist is maintained as a `Set<String>` in `InterceptAds.kt` with exact-match and subdomain matching support (e.g., blocking `ads.spotify.com` also blocks `foo.ads.spotify.com`).
+
+---
+
 ## [v260225] - 2026-02-25
 
 ### Added
