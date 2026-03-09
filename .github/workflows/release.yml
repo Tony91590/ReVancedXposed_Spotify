@@ -1,5 +1,4 @@
-name: Release
-
+name: Android CI
 
 on:
   push:
@@ -19,14 +18,12 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # needed to create the GitHub release
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0   # needed so git log date is available for versionName
+          fetch-depth: 0        # needed for git log date in versionName
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -38,62 +35,38 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Derive a deterministic seed from the tag name so the package
-      # name is stable for the lifetime of this release.
-      - name: Derive package-name seed from tag
+      - name: Generate package-name seed
         id: seed
-        run: |
-          TAG="${{ github.ref_name }}"
-          # Convert tag characters to a numeric seed via a simple hash
-          SEED=$(echo -n "$TAG" | cksum | awk '{print $1}')
-          echo "NUMBER=${SEED}" >> $GITHUB_OUTPUT
-          echo "Tag: $TAG → seed: $SEED"
+        run: echo "NUMBER=$(shuf -i 1-10000 -n 1)" >> $GITHUB_OUTPUT
 
       - name: Build release APK
         run: ./gradlew :app:assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.seed.outputs.NUMBER }}
 
-      - name: Rename APK
-        id: apk
-        run: |
-          TAG="${{ github.ref_name }}"
-          APK_NAME="RVX-Spotify-${TAG}.apk"
-          cp app/build/outputs/apk/universal/release/app-universal-release.apk "${APK_NAME}"
-          echo "APK_NAME=${APK_NAME}" >> $GITHUB_OUTPUT
-
-      - name: Upload APK as workflow artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk-${{ github.ref_name }}
+          name: rvxp-ci-release-apk
+          retention-days: 14
           path: |
-            ${{ steps.apk.outputs.APK_NAME }}
+            app/build/outputs/apk/universal/release/*.apk
             app/build/outputs/mapping/universalRelease/mapping.txt
 
-      - name: Extract changelog for this version
-        id: changelog
+      # Only publish an autobuild release for pushes to main (not PRs, not forks)
+      - name: Publish autobuild release
+        if: >
+          github.event_name != 'pull_request' &&
+          github.repository == github.event.repository.full_name
         run: |
-          TAG="${{ github.ref_name }}"
-          # Strip leading 'v' to match CHANGELOG section header if needed
-          VERSION="${TAG#v}"
-          # Extract the block between the matching header and the next header
-          NOTES=$(awk "/^## \[${TAG}\]/{found=1; next} found && /^## /{exit} found" CHANGELOG.md)
-          if [ -z "$NOTES" ]; then
-            NOTES=$(awk "/^## \[v${VERSION}\]/{found=1; next} found && /^## /{exit} found" CHANGELOG.md)
-          fi
-          if [ -z "$NOTES" ]; then
-            NOTES="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
-          fi
-          # Write to a temp file to safely pass multiline content to gh
-          printf '%s\n' "$NOTES" > /tmp/release_notes.md
-          echo "Release notes written."
+          GIT_DESCRIBE=$(git rev-parse --short HEAD)
+          GIT_COMMIT_DATE=$(git log -1 --format=%cd --date=format:%y%m%d)
+          APK_NAME="ReVancedXposedSpotify-${GIT_COMMIT_DATE}.apk"
+          cp app/build/outputs/apk/universal/release/app-universal-release.apk "${APK_NAME}"
+          gh release delete autobuild --yes || true
+          gh release create autobuild "${APK_NAME}" \
+            --prerelease \
+            --title "Nightly build ${GIT_COMMIT_DATE}" \
+            --notes "Automated nightly build from commit \`${GIT_DESCRIBE}\`.
 
-      - name: Create GitHub release
-        run: |
-          TAG="${{ github.ref_name }}"
-          gh release create "${TAG}" \
-            "${{ steps.apk.outputs.APK_NAME }}" \
-            app/build/outputs/mapping/universalRelease/mapping.txt \
-            --title "Release ${TAG}" \
-            --notes-file /tmp/release_notes.md \
-            --verify-tag
+          > The package name and signature of this build change daily. You do **not** need to reinstall every day."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
