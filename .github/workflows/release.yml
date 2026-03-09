@@ -1,17 +1,23 @@
 name: Release
 
+
 on:
   push:
-    tags:
-      - 'v*'   # triggers on versioned tags, e.g. v260225, v1.1.0
+    branches: [ "orign" ]
+    tags-ignore:
+      - 'v*'          # tagged releases are handled by release.yml
+  pull_request:
+    branches: [ "orign" ]
+  schedule:
+    - cron: '0 0 * * *'
 
 concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: Build & publish release
+  build:
+    name: Build APK
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to create the GitHub release
