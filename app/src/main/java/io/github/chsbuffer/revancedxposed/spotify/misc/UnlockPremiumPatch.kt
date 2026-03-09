@@ -16,13 +16,12 @@ import java.lang.reflect.Field
 
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.UnlockPremium() {
-    // Override the attributes map in the getter method's return value.
-    // Creates a defensive copy with cloned attribute objects, leaving the original
-    // protobuf data untouched to prevent server-side detection via state serialization.
+    // Override the attributes map in the getter method.
     ::productStateProtoFingerprint.hookMethod {
-        after { param ->
-            val result = param.result as? Map<String, *> ?: return@after
-            param.result = UnlockPremiumPatch.createOverriddenAttributesMap(result)
+        val field = ::attributesMapField.field
+        before { param ->
+            Logger.printDebug { field.get(param.thisObject)!!.toString() }
+            UnlockPremiumPatch.overrideAttributes(field.get(param.thisObject) as Map<String, *>)
         }
     }
 
@@ -54,18 +53,15 @@ fun SpotifyHook.UnlockPremium() {
     }
 
     // Disable forced shuffle when asking for an album/playlist via Google Assistant.
-    // Wrapped in runCatching so a class name change doesn't crash the entire hook chain.
-    runCatching {
-        XposedHelpers.findAndHookMethod(
-            "com.spotify.player.model.command.options.AutoValue_PlayerOptionOverrides\$Builder",
-            classLoader,
-            "build",
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.thisObject.callMethod("shufflingContext", false)
-                }
-            })
-    }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook failed: ${it.message}" } }
+    XposedHelpers.findAndHookMethod(
+        "com.spotify.player.model.command.options.AutoValue_PlayerOptionOverrides\$Builder",
+        classLoader,
+        "build",
+        object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                param.thisObject.callMethod("shufflingContext", false)
+            }
+        })
 
     // Hook the method which adds context menu items and return before adding if the item is a Premium ad.
     val contextMenuViewModelClazz = ::contextMenuViewModelClass.clazz
@@ -90,23 +86,25 @@ fun SpotifyHook.UnlockPremium() {
         })
 
     // Remove ads sections from home.
-    // Returns a filtered copy instead of mutating the original protobuf list,
-    // preventing detection through protobuf integrity checks.
     ::homeStructureGetSectionsFingerprint.hookMethod {
         after { param ->
-            param.result = UnlockPremiumPatch.filterHomeSections(param.result as List<*>)
+            val sections = param.result
+            // Set sections mutable
+            sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
+            UnlockPremiumPatch.removeHomeSections(param.result as MutableList<*>)
         }
     }
     // Remove ads sections from browser.
     ::browseStructureGetSectionsFingerprint.hookMethod {
         after { param ->
-            param.result = UnlockPremiumPatch.filterBrowseSections(param.result as List<*>)
+            val sections = param.result
+            // Set sections mutable
+            sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
+            UnlockPremiumPatch.removeBrowseSections(param.result as MutableList<*>)
         }
     }
 
     // Remove pendragon (pop up ads) requests and return the errors instead.
-    // No network request is made — the error value is extracted from the app's own
-    // onErrorReturn handler, so this mimics a natural request failure.
     val replaceFetchRequestSingleWithError = object : XC_MethodHook() {
         val justMethod =
             DexMethod("Lio/reactivex/rxjava3/core/Single;->just(Ljava/lang/Object;)Lio/reactivex/rxjava3/core/Single;").toMethod()
