@@ -3,51 +3,70 @@ name: Android CI
 on:
   push:
     branches: [ "main" ]
+    tags-ignore:
+      - 'v*'          # tagged releases are handled by release.yml
+  pull_request:
+    branches: [ "main" ]
   schedule:
     - cron: '0 0 * * *'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: true
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0        # needed for git log date in versionName
 
-    - name: set up JDK
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Get random number
-      id: random
-      run: echo "NUMBER=$(shuf -i 1-10000 -n 1)" >> $GITHUB_OUTPUT
+      - name: Generate package-name seed
+        id: seed
+        run: echo "NUMBER=$(shuf -i 1-10000 -n 1)" >> $GITHUB_OUTPUT
 
-    - name: Build Release
-      run: ./gradlew assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.random.outputs.NUMBER }}
+      - name: Build release APK
+        run: ./gradlew :app:assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.seed.outputs.NUMBER }}
 
-    - name: Upload a Release Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: rvxp-ci-release-apk
-        path: |
-          app/build/outputs/apk/universal/release
-          app/build/outputs/mapping/universalRelease/mapping.txt
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvxp-ci-release-apk
+          retention-days: 14
+          path: |
+            app/build/outputs/apk/universal/release/*.apk
+            app/build/outputs/mapping/universalRelease/mapping.txt
 
-    - name: Create AutoBuild Release
-      run: |
-        GIT_DESCRIBE=$(git rev-parse --short HEAD)
-        GIT_COMMIT_DATE=$(git log -1 --format=%cd --date=format:%y%m%d)
-        cd app/build/outputs/apk/universal/release/
-        mv app-universal-release.apk ReVancedXposedSpotify-${GIT_COMMIT_DATE}.apk
-        gh release delete autobuild --yes || true
-        gh release create autobuild ReVancedXposedSpotify-${GIT_COMMIT_DATE}.apk --latest --title "Build ${GIT_COMMIT_DATE}" --notes "Commit ${GIT_DESCRIBE}. The package name and signature of this build are different every day. You don't have to reinstall it every day."
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Only publish an autobuild release for pushes to main (not PRs, not forks)
+      - name: Publish autobuild release
+        if: >
+          github.event_name != 'pull_request' &&
+          github.repository == github.event.repository.full_name
+        run: |
+          GIT_DESCRIBE=$(git rev-parse --short HEAD)
+          GIT_COMMIT_DATE=$(git log -1 --format=%cd --date=format:%y%m%d)
+          APK_NAME="ReVancedXposedSpotify-${GIT_COMMIT_DATE}.apk"
+          cp app/build/outputs/apk/universal/release/app-universal-release.apk "${APK_NAME}"
+          gh release delete autobuild --yes || true
+          gh release create autobuild "${APK_NAME}" \
+            --prerelease \
+            --title "Nightly build ${GIT_COMMIT_DATE}" \
+            --notes "Automated nightly build from commit \`${GIT_DESCRIBE}\`.
+
+          > The package name and signature of this build change daily. You do **not** need to reinstall every day."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

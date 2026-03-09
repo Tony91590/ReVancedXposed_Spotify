@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ReVancedXposed Spotify — Discussions
+    url: https://github.com/simoabid/ReVancedXposed_Spotify/discussions
+    about: General questions, "does this work with version X?", usage help.
+  - name: xManager Discord
+    url: https://discord.gg/xManager
+    about: Community support and general Spotify modding discussion.
+  - name: Contributing guide
+    url: https://github.com/simoabid/ReVancedXposed_Spotify/blob/main/CONTRIBUTING.md
+    about: Read this before opening an issue or pull request.

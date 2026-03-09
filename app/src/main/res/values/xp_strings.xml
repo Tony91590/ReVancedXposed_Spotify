@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ReVanced Xposed Spotify</string>
-    <string name="app_description"></string>
-    <string name="app_launcher_name">PLACEHOLDER</string>
+    <string name="app_name">RVX Spotify</string>
+    <string name="app_description">Spotify with premium features and ad blocking</string>
+    <string name="app_launcher_name">RVX Spotify</string>
 </resources>
