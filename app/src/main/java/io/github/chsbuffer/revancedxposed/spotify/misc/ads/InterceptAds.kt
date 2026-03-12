@@ -48,32 +48,24 @@ private const val TAG = "AD_DIAG"
 private const val DNS_DISCOVERY_MODE = false
 
 /**
- * Ad suppression — Phase 20: DNS-level ad domain blocking.
+ * Ad suppression — Phase 21: DNS-level + Path-level ad blocking.
  *
- * Instead of trying to hook Spotify's complex internal ad pipeline
- * (which failed across Phases 16-19 due to native C++ player bypass),
- * this approach blocks ad-serving domains at the DNS resolution level
- * WITHIN Spotify's process.
+ * Dual-layer network ad blocking:
  *
- * This is the same technique used by AdGuard DNS, Pi-hole, etc. —
- * but implemented as an in-process Xposed hook so no external DNS
- * config is needed.
+ * Layer 1 (DNS): Blocks ad-only domains at DNS resolution level by
+ * sinkholing them to 127.0.0.1. Same technique as AdGuard DNS / Pi-hole.
  *
- * How it works:
- *   1. Hooks java.net.InetAddress.getByName() and getAllByName()
- *   2. When Spotify tries to resolve a blocked domain, returns loopback
- *      (127.0.0.1) instead of the real IP
- *   3. Spotify's HTTP requests to ad servers fail to connect → no ads
+ * Layer 2B (Path): Blocks ad-related URL paths on shared domains like
+ * spclient.spotify.com that also carry legitimate traffic (playlists,
+ * profiles, playback). DNS can't block these — we need URL-level
+ * inspection via OkHttp interceptor hooks.
  *
  * The domain list was verified working via AdGuard DNS — zero ads,
  * zero disruption, music plays perfectly.
- *
- * Additionally hooks OkHttp (if present) and WebView to ensure all
- * network paths are covered.
  */
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.InterceptAds() {
-    Log.i(TAG, "═══ InterceptAds v20 (DNS block) starting ═══")
+    Log.i(TAG, "═══ InterceptAds v21 (DNS + Path block) starting ═══")
     var hooks = 0
 
     // ══════════════════════════════════════════════════════════════
@@ -107,6 +99,39 @@ fun SpotifyHook.InterceptAds() {
         "ads.spotify.com",
         "spclient.wg.spotify.com"
     )
+
+    // ══════════════════════════════════════════════════════════════
+    // Blocked URL path prefixes (for shared domains like spclient)
+    //
+    // These paths serve ads on domains that ALSO carry legitimate
+    // traffic (playlists, profiles, playback), so we can't block
+    // the entire domain at DNS level — we block only the ad paths.
+    //
+    // Discovered via mitmproxy traffic capture.
+    // ══════════════════════════════════════════════════════════════
+    val blockedPathPrefixes = setOf(
+        "/ads/",
+        "/ad-logic/",
+        "/ad-monetization/",
+        "/v1/ads/",
+        "/v2/ads/",
+        "/v3/ads/",
+        "/ads?"
+    )
+
+    // Domains that use mixed ad + legitimate traffic
+    // (regional spclient variants like gew4-spclient, gae2-spclient, etc.)
+    fun isSpclientDomain(host: String?): Boolean {
+        if (host == null) return false
+        val h = host.lowercase()
+        return h.contains("spclient") && h.endsWith(".spotify.com")
+    }
+
+    fun isBlockedPath(path: String?): Boolean {
+        if (path == null) return false
+        val p = path.lowercase()
+        return blockedPathPrefixes.any { prefix -> p.startsWith(prefix) }
+    }
 
     // Loopback address for sinkholing
     val loopback = InetAddress.getByAddress("blocked.local", byteArrayOf(127, 0, 0, 1))
@@ -196,8 +221,83 @@ fun SpotifyHook.InterceptAds() {
         hooks++
     } catch (e: Throwable) { Log.w(TAG, "✗ 2A: URL.openConnection: ${e.message}") }
 
+    // ── 2B: Path-level blocking on spclient domains ───────────────
+    //
+    // spclient domains (gew4-spclient.spotify.com, etc.) serve BOTH
+    // ad traffic and legitimate traffic on the same domain.
+    // DNS can't block these — we intercept at the URL/path level.
+    //
+    // Hooks OkHttp's RealCall to intercept requests before they're
+    // sent, returning an empty 204 response for ad paths.
+    try {
+        val interceptorClass = Class.forName("okhttp3.Interceptor\$Chain", false, classLoader)
+        val requestClass = Class.forName("okhttp3.Request", false, classLoader)
+        val responseClass = Class.forName("okhttp3.Response", false, classLoader)
+        val responseBuilderClass = Class.forName("okhttp3.Response\$Builder", false, classLoader)
+        val protocolClass = Class.forName("okhttp3.Protocol", false, classLoader)
+        val responseBodyClass = Class.forName("okhttp3.ResponseBody", false, classLoader)
+        val mediaTypeClass = Class.forName("okhttp3.MediaType", false, classLoader)
+        val httpUrlClass = Class.forName("okhttp3.HttpUrl", false, classLoader)
+
+        // Get the HttpUrl accessors
+        val urlMethod = requestClass.getMethod("url")
+        val hostMethod = httpUrlClass.getMethod("host")
+        val encodedPathMethod = httpUrlClass.getMethod("encodedPath")
+
+        // Get Response.Builder methods
+        val newBuilder = responseBuilderClass.getConstructor()
+        val builderRequest = responseBuilderClass.getMethod("request", requestClass)
+        val builderProtocol = responseBuilderClass.getMethod("protocol", protocolClass)
+        val builderCode = responseBuilderClass.getMethod("code", Int::class.java)
+        val builderMessage = responseBuilderClass.getMethod("message", String::class.java)
+        val builderBody = responseBuilderClass.getMethod("body", responseBodyClass)
+        val builderBuild = responseBuilderClass.getMethod("build")
+
+        // Get Protocol.HTTP_1_1
+        val http11 = protocolClass.getField("HTTP_1_1").get(null)
+
+        // Get ResponseBody.create(MediaType, String)
+        val parseMediaType = mediaTypeClass.getMethod("parse", String::class.java)
+        val emptyMediaType = parseMediaType.invoke(null, "text/plain")
+        val createBody = responseBodyClass.getMethod("create", mediaTypeClass, String::class.java)
+
+        // Hook the proceed(Request) method on Interceptor.Chain
+        val proceedMethod = interceptorClass.getMethod("proceed", requestClass)
+        XposedBridge.hookMethod(proceedMethod, object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: MethodHookParam) {
+                try {
+                    val request = param.args[0] ?: return
+                    val httpUrl = urlMethod.invoke(request) ?: return
+                    val host = hostMethod.invoke(httpUrl) as? String ?: return
+                    val path = encodedPathMethod.invoke(httpUrl) as? String ?: return
+
+                    if (isSpclientDomain(host) && isBlockedPath(path)) {
+                        Log.i(TAG, "★ PATH: BLOCKED $host$path")
+                        if (DNS_DISCOVERY_MODE) {
+                            Log.i(TAG, "DNS_LOG: ★ PATH_BLOCKED  $host$path")
+                        }
+
+                        // Build an empty 204 No Content response
+                        val emptyBody = createBody.invoke(null, emptyMediaType, "")
+                        val builder = newBuilder.newInstance()
+                        builderRequest.invoke(builder, request)
+                        builderProtocol.invoke(builder, http11)
+                        builderCode.invoke(builder, 204)
+                        builderMessage.invoke(builder, "Blocked by RVX")
+                        builderBody.invoke(builder, emptyBody)
+                        param.result = builderBuild.invoke(builder)
+                    } else if (DNS_DISCOVERY_MODE && isSpclientDomain(host)) {
+                        Log.i(TAG, "DNS_LOG: ✓ PATH_ALLOWED  $host$path")
+                    }
+                } catch (_: Throwable) { /* don't crash on path check failures */ }
+            }
+        })
+        Log.i(TAG, "✓ 2B: OkHttp path-level blocking hooked")
+        hooks++
+    } catch (e: Throwable) { Log.w(TAG, "✗ 2B: OkHttp path blocking: ${e.message}") }
+
     // ══════════════════════════════════════════════════════════════
-    // LAYER 3: OkHttp interceptor (Spotify uses OkHttp internally)
+    // LAYER 3: OkHttp DNS interceptor (Spotify uses OkHttp internally)
     // ══════════════════════════════════════════════════════════════
     //
     // Hook OkHttp's Dns interface to block resolution of ad domains.
@@ -348,7 +448,7 @@ fun SpotifyHook.InterceptAds() {
         }
     }
 
-    Log.i(TAG, "═══ InterceptAds v20 complete: $hooks hooks ═══")
+    Log.i(TAG, "═══ InterceptAds v21 complete: $hooks hooks ═══")
 }
 
 private fun getTrackUri(obj: Any?): String? {
