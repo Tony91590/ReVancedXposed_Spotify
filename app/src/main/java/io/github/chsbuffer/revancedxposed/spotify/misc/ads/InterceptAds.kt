@@ -83,7 +83,9 @@ fun SpotifyHook.InterceptAds() {
         "desktop.spotify.com",
         "weblb-wg.gslb.spotify.com",
         "redirect.spotify.net",
-
+        "spclient.wg.spotify.com",
+        
+        
         // ── Spotify analytics & telemetry ────────────────────────
         "analytics.spotify.com",
         "tracking.spotify.com",
@@ -109,7 +111,17 @@ fun SpotifyHook.InterceptAds() {
         "sb.scorecardresearch.com",
         "b.scorecardresearch.com",
         "segment-data-us-east.zqtk.net",
-        "live.ravelin.click"
+        "live.ravelin.click",
+
+        // Other domains
+
+        "gew1-dealer.g2.spotify.com",
+        "gew1-dealer-ssl.spotify.com",
+        //"gew1-spclient.spotify.com",
+        //"edge-web-gew1.dual-gslb.spotify.com",
+        
+
+        
 
         // NOTE: spclient.wg.spotify.com is NOT blocked at DNS level
         // because spclient domains carry both ad AND legitimate traffic.
