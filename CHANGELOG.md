@@ -6,6 +6,19 @@ This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/
 
 ---
 
+## [v260317] - 2026-03-17
+
+### Added
+- **Anti-logout protection** — blocks `dealer.g2.spotify.com` and its regional variants (gew4, guc3, etc.). These domains deliver real-time server-side "kill session" commands. By blocking the dealer WebSocket channel, the server can no longer push forced logout signals to the client even if modification is detected.
+
+- **Consolidated blocklist** — refined the ad domain list to use subdomain matching for `dealer` and `spclient` regions, keeping the list clean and future-proof.
+
+## [v260312] - 2026-03-12
+
+### Added
+- **Path-level ad blocking (Layer 2B)** — implemented an OkHttp interceptor to block ad-specific URL paths (`/ads/`, `/ad-logic/`, etc.) on shared `spclient` domains. This handles cases where DNS blocking is too broad because the domain also carries legitimate traffic (playlists, profiles). Returns empty 204 responses to ensure app stability.
+- **Initial Path-level interceptor** — research and implementation of OkHttp hooks for URL-level inspection.
+
 ## [v260308] - 2026-03-08
 
 ### Added

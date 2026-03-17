@@ -73,32 +73,49 @@ fun SpotifyHook.InterceptAds() {
     // Verified working via AdGuard DNS — zero ads, zero disruption.
     // ══════════════════════════════════════════════════════════════
     val blockedDomains = setOf(
+        // ── Spotify ad infrastructure ────────────────────────────
+        "ads.spotify.com",
         "audio-ak-spotify-com.akamaized.net",
-        "analytics.spotify.com",
+        "audio2.spotify.com",
         "adstats.spotify.com",
         "adeventtracker.spotify.com",
-        "segment-data-us-east.zqtk.net",
-        "live.ravelin.click",
+        "sponsored-recommendations.spotify.com",
+        "desktop.spotify.com",
         "weblb-wg.gslb.spotify.com",
-        "tracking.spotify.com",
         "redirect.spotify.net",
+
+        // ── Spotify analytics & telemetry ────────────────────────
+        "analytics.spotify.com",
+        "tracking.spotify.com",
         "log.spotify.com",
+        "crashdump.spotify.com",
+
+        // ── Dealer domains (real-time WebSocket messaging) ───────
+        // These deliver server-side commands including forced
+        // logout signals. Blocking them prevents the server from
+        // pushing session-kill commands to the client.
+        // Using base domain — subdomain matching catches ALL
+        // regional variants (gew4-, guc3-, gew1-, gae2-, etc.)
+        "dealer.g2.spotify.com",
+
+        // ── Third-party tracking & ads ───────────────────────────
         "firebaseinstallations.googleapis.com",
         "firebase-settings.crashlytics.com",
-        "crashdump.spotify.com",
         "cdn.branch.io",
         "api2.branch.io",
-        "sponsored-recommendations.spotify.com",
         "pagead2.googlesyndication.com",
         "bs.serving-sys.com",
         "bounceexchange.com",
         "sb.scorecardresearch.com",
         "b.scorecardresearch.com",
-        "audio2.spotify.com",
-        "desktop.spotify.com",
-        "ads.spotify.com",
-        "spclient.wg.spotify.com"
+        "segment-data-us-east.zqtk.net",
+        "live.ravelin.click"
+
+        // NOTE: spclient.wg.spotify.com is NOT blocked at DNS level
+        // because spclient domains carry both ad AND legitimate traffic.
+        // Ad paths on spclient are blocked by Layer 2B (path-level).
     )
+
 
     // ══════════════════════════════════════════════════════════════
     // Blocked URL path prefixes (for shared domains like spclient)
