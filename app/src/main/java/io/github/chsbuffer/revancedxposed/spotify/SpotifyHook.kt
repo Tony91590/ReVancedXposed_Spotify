@@ -6,6 +6,7 @@ import io.github.chsbuffer.revancedxposed.BaseHook
 import io.github.chsbuffer.revancedxposed.injectHostClassLoaderToSelf
 import io.github.chsbuffer.revancedxposed.spotify.misc.UnlockPremium
 import io.github.chsbuffer.revancedxposed.spotify.misc.ads.InterceptAds
+import io.github.chsbuffer.revancedxposed.spotify.misc.session.SessionProtection
 import io.github.chsbuffer.revancedxposed.spotify.misc.privacy.SanitizeSharingLinks
 import io.github.chsbuffer.revancedxposed.spotify.misc.widgets.FixThirdPartyLaunchersWidgets
 
@@ -16,6 +17,7 @@ class SpotifyHook(app: Application, lpparam: LoadPackageParam) : BaseHook(app, l
         ::SanitizeSharingLinks,
         ::UnlockPremium,
         ::InterceptAds,
+        ::SessionProtection,
         ::FixThirdPartyLaunchersWidgets
     )
 

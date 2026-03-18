@@ -123,9 +123,6 @@ fun SpotifyHook.InterceptAds() {
 
         
 
-        // NOTE: spclient.wg.spotify.com is NOT blocked at DNS level
-        // because spclient domains carry both ad AND legitimate traffic.
-        // Ad paths on spclient are blocked by Layer 2B (path-level).
     )
 
 

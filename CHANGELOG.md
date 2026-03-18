@@ -6,7 +6,19 @@ This project follows the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/
 
 ---
 
+## [v260318] - 2026-03-18
+
+### Added
+- **Multi-layer Session Persistence** — a defense-in-depth strategy to prevent forced logouts and session invalidation.
+
+| Layer | Functionality | Implementation |
+| :--- | :--- | :--- |
+| **Layer 1: Token Replay** | Caches the last successful auth response from `login5.spotify.com`. When the server returns a 401 (token revoked), it replays the cached 200 response to keep the session alive. | OkHttp `afterHookedMethod` on `proceed()` |
+| **Layer 2: Detection Blocking** | Blocks `spclient` paths that report attribute mismatches to the server (`/v3/dual-sync/`, `/dual-sync/`, `/melody/v1/check`). | OkHttp `beforeHookedMethod` returning fake 204 |
+| **Layer 3: Credential Protection** | Hooks `SharedPreferences.Editor.remove()` and `clear()` to prevent the app from deleting stored auth tokens, ensuring credentials survive forced logout attempts. | Android `SharedPreferences` hooks |
+
 ## [v260317] - 2026-03-17
+
 
 ### Added
 - **Anti-logout protection** — blocks `dealer.g2.spotify.com` and its regional variants (gew4, guc3, etc.). These domains deliver real-time server-side "kill session" commands. By blocking the dealer WebSocket channel, the server can no longer push forced logout signals to the client even if modification is detected.
