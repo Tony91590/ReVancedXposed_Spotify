@@ -9,17 +9,7 @@ android {
 
     defaultConfig {
         minSdk = 21
-        // targetSdk pour les tests unitaires
-        testOptions {
-            unitTests.all {
-                it.targetSdk = 34
-            }
-        }
-        // targetSdk pour lint
-        lint {
-            targetSdk = 34
-        }
-        // versionCode et versionName sont supprimés (library)
+        // Pour une library, pas besoin de targetSdk, versionCode ou versionName
     }
 
     buildTypes {
