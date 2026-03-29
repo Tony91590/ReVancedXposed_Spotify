@@ -110,7 +110,7 @@ dependencies {
     implementation(group = "", name = "dexkit-android", ext = "aar")
     implementation("com.google.flatbuffers:flatbuffers-java:23.5.26") // dexkit dependency
     implementation(libs.annotation)
-    implementation "dnsjava:dnsjava:3.5.2"
+    implementation ("dnsjava:dnsjava:3.5.2")
     implementation(libs.kotlinx.serialization.protobuf)
     testImplementation(kotlin("test-junit5"))
     testImplementation(libs.junit.jupiter.params)
