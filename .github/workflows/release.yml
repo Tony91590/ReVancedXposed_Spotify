@@ -1,72 +1,46 @@
-name: Android CI
+name: Build Xposed APK
 
 on:
   push:
     branches: [ "ads" ]
-    tags-ignore:
-      - 'v*'          # tagged releases are handled by release.yml
-  pull_request:
-    branches: [ "ads" ]
-  schedule:
-    - cron: '0 0 * * *'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
 
 jobs:
   build:
-    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          fetch-depth: 0        # needed for git log date in versionName
+      # 📥 1. Clone repo
+      - name: Checkout
+        uses: actions/checkout@v4
 
+      # ☕ 2. Setup Java
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          java-version: '17'
 
-      - name: Grant execute permission for gradlew
+      # ⚙️ 3. Cache Gradle (accélère builds)
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+      # 🔧 4. Permissions gradlew
+      - name: Grant execute permission
         run: chmod +x gradlew
 
-      - name: Generate package-name seed
-        id: seed
-        run: echo "NUMBER=$(shuf -i 1-10000 -n 1)" >> $GITHUB_OUTPUT
+      # 🏗️ 5. Build APK
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
 
-      - name: Build release APK
-        run: ./gradlew :app:assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.seed.outputs.NUMBER }}
-
-      - name: Upload APK artifact
+      # 📦 6. Upload APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: rvxp-ci-release-apk
-          retention-days: 14
-          path: |
-            app/build/outputs/apk/universal/release/*.apk
-            app/build/outputs/mapping/universalRelease/mapping.txt
-
-      # Only publish an autobuild release for pushes to main (not PRs, not forks)
-      - name: Publish autobuild release
-        if: >
-          github.event_name != 'pull_request' &&
-          github.repository == github.event.repository.full_name
-        run: |
-          GIT_DESCRIBE=$(git rev-parse --short HEAD)
-          GIT_COMMIT_DATE=$(git log -1 --format=%cd --date=format:%y%m%d)
-          APK_NAME="ReVancedXposedSpotify-${GIT_COMMIT_DATE}.apk"
-          cp app/build/outputs/apk/universal/release/app-universal-release.apk "${APK_NAME}"
-          gh release delete autobuild --yes || true
-          gh release create autobuild "${APK_NAME}" \
-            --prerelease \
-            --title "Nightly build ${GIT_COMMIT_DATE}" \
-            --notes "Automated nightly build from commit \`${GIT_DESCRIBE}\`.
-
-          > The package name and signature of this build change daily. You do **not** need to reinstall every day."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: xposed-apk
+          path: app/build/outputs/apk/release/app-release.apk
