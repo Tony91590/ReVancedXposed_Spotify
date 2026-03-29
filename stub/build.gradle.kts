@@ -5,13 +5,21 @@ plugins {
 
 android {
     namespace = "io.github.chsbuffer.revancedxposed.spotify.stub"
-    compileSdk = 34  // <--- obligatoire
+    compileSdk = 34  // Obligatoire
 
     defaultConfig {
         minSdk = 21
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // targetSdk pour les tests unitaires
+        testOptions {
+            unitTests.all {
+                it.targetSdk = 34
+            }
+        }
+        // targetSdk pour lint
+        lint {
+            targetSdk = 34
+        }
+        // versionCode et versionName sont supprimés (library)
     }
 
     buildTypes {
