@@ -1,38 +1,19 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
-        mavenCentral()
         gradlePluginPortal()
+        google()
+        mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        flatDir {
-            dirs("libs")
-        }
         google()
         mavenCentral()
-        maven(url = "https://api.xposed.info")
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
-plugins {
-    id("com.android.settings") version ("8.13.0")
-}
-
-android {
-    compileSdk = 36
-    minSdk = 27
-}
-
-rootProject.name = "RVX Spotify"
-include(":app")
-include(":stub")
+rootProject.name = "ReVancedXposed_Spotify"
+include(":app", ":stub")
