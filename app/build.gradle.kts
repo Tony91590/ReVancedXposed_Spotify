@@ -14,7 +14,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Pour Xposed Hook, pas de multiDex
         multiDexEnabled = false
     }
 
@@ -34,8 +33,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    // Nouveau DSL recommandé pour Kotlin compilerOptions
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
@@ -44,15 +46,15 @@ android {
 }
 
 repositories {
-    google()
-    mavenCentral() // Obligatoire pour dnsjava
-    maven { url = uri("https://jitpack.io") } // si besoin pour dépendances Xposed
+    mavenCentral() // dnsjava disponible ici
+    maven { url = uri("https://jitpack.io") } // si besoin pour Xposed
+    // Retirer google() si tu utilises settings repositories
 }
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.10")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("org.xbill:dnsjava:3.5.2") // Version stable compatible Maven Central
-    // Ajoute ici tes dépendances Xposed / ReVanced nécessaires
+    implementation("org.xbill:dnsjava:3.5.2")
+    // Xposed / ReVanced dépendances ici si nécessaire
 }
