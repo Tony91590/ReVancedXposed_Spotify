@@ -3,7 +3,8 @@ import java.util.Random
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
+    //alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
 val gitCommitHashProvider = providers.exec {
@@ -103,8 +104,10 @@ tasks.withType<Test> {
 dependencies {
 //    implementation(libs.dexkit)
     implementation(group = "", name = "dexkit-android", ext = "aar")
-    implementation("com.google.flatbuffers:flatbuffers-java:23.5.26") // dexkit dependency
+    implementation(libs.flatbuffers.java) // dexkit dependency
     implementation(libs.annotation)
+    implementation(libs.kotlinx.serialization.protobuf)
+    implementation(libs.material)
     testImplementation(kotlin("test-junit5"))
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.jadx.core)

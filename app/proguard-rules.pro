@@ -29,3 +29,7 @@
 -assumenosideeffects class app.revanced.extension.shared.settings.* {
     public <init>(...);
 }
+
+-assumenosideeffects class app.revanced.extension.shared.Logger {
+    *;
+}

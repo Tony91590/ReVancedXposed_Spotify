@@ -18,40 +18,27 @@ import de.robv.android.xposed.XposedHelpers;
 @SuppressWarnings("unused")
 public final class UnlockPremiumPatch {
 
-    private static class OverrideAttribute {
-        /**
-         * Account attribute key.
-         */
-        final String key;
+    /**
+     * @param key           Account attribute key.
+     * @param overrideValue Override value.
+     * @param isExpected    If this attribute is expected to be present in all situations.
+     *                      If false, then no error is raised if the attribute is missing.
+     */
+    private record OverrideAttribute(String key, Object overrideValue, boolean isExpected) {
+            OverrideAttribute(String key, Object overrideValue) {
+                this(key, overrideValue, true);
+            }
 
-        /**
-         * Override value.
-         */
-        final Object overrideValue;
-
-        /**
-         * If this attribute is expected to be present in all situations.
-         * If false, then no error is raised if the attribute is missing.
-         */
-        final boolean isExpected;
-
-        OverrideAttribute(String key, Object overrideValue) {
-            this(key, overrideValue, true);
+            private OverrideAttribute(String key, Object overrideValue, boolean isExpected) {
+                this.key = Objects.requireNonNull(key);
+                this.overrideValue = Objects.requireNonNull(overrideValue);
+                this.isExpected = isExpected;
+            }
         }
-
-        OverrideAttribute(String key, Object overrideValue, boolean isExpected) {
-            this.key = Objects.requireNonNull(key);
-            this.overrideValue = Objects.requireNonNull(overrideValue);
-            this.isExpected = isExpected;
-        }
-    }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
-            // Disables player and app ads.
-            new OverrideAttribute("ads", FALSE),
             // Works along on-demand, allows playing any song without restriction.
-            new OverrideAttribute("player-license", "premium"),
-            new OverrideAttribute("player-license-v2", "premium"),
+            new OverrideAttribute("player-license", "open"),
             // Disables shuffle being initially enabled when first playing a playlist.
             new OverrideAttribute("shuffle", FALSE),
             // Allows playing any song on-demand, without a shuffled order.
@@ -66,9 +53,6 @@ public final class UnlockPremiumPatch {
             new OverrideAttribute("streaming-rules", ""),
             // Enables premium UI in settings and removes the premium button in the nav-bar.
             new OverrideAttribute("nft-disabled", "1"),
-            // Enable Spotify Connect and disable other premium related UI, like buying premium.
-            // It also removes the download button.
-            new OverrideAttribute("type", "premium"),
             // Enable Spotify Car Thing hardware device.
             // Device is discontinued and no longer works with the latest releases,
             // but it might still work with older app targets.

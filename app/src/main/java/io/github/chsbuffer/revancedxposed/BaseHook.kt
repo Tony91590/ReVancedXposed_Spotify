@@ -10,6 +10,11 @@ import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
 import io.github.chsbuffer.revancedxposed.BuildConfig.DEBUG
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 import org.luckypray.dexkit.DexKitBridge
 import org.luckypray.dexkit.DexKitCacheBridge
 import org.luckypray.dexkit.result.ClassData
@@ -18,6 +23,7 @@ import org.luckypray.dexkit.result.MethodData
 import org.luckypray.dexkit.wrap.DexClass
 import org.luckypray.dexkit.wrap.DexField
 import org.luckypray.dexkit.wrap.DexMethod
+import java.io.File
 import java.lang.reflect.Constructor
 import java.lang.reflect.Member
 import java.lang.reflect.Method
@@ -69,9 +75,29 @@ interface IHook {
     fun DexField.toField() = getFieldInstance(classLoader)
 }
 
+fun String.toSha256(): String {
+    val bytes = this.toByteArray()
+    val md = java.security.MessageDigest.getInstance("SHA-256")
+    val digest = md.digest(bytes)
+    return digest.toHexString()
+}
+
+@Serializable
+data class Pairs(
+    val map: MutableMap<String, String?>
+)
+
 @Suppress("UNCHECKED_CAST")
+@OptIn(ExperimentalSerializationApi::class)
 class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
-    private val map = mutableMapOf<String, String>()
+    val file = File(app.cacheDir.path, BuildConfig.APPLICATION_ID.toSha256())
+
+    val pref = runCatching { ProtoBuf.decodeFromByteArray<Pairs>(file.readBytes()) }.getOrElse {
+        Pairs(mutableMapOf())
+    }
+
+    val map get() = pref.map
+
     override fun clearAll() {
         map.clear()
     }
@@ -82,18 +108,23 @@ class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
 
     override fun getList(
         key: String, default: List<String>?
-    ): List<String>? = map.getOrDefault(key, null)?.takeIf(String::isNotBlank)?.split('|') ?: default
+    ): List<String>? =
+        map.getOrDefault(key, null)?.takeIf(String::isNotBlank)?.split('|') ?: default
 
     override fun put(key: String, value: String) {
-        map.put(key, value)
+        map[key] = value
     }
 
     override fun putList(key: String, value: List<String>) {
-        map.put(key, value.joinToString("|"))
+        map[key] = value.joinToString("|")
     }
 
     override fun remove(key: String) {
         map.remove(key)
+    }
+
+    fun saveCache() {
+        file.writeBytes(ProtoBuf.encodeToByteArray(pref))
     }
 }
 
@@ -121,12 +152,11 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
 
     override fun Hook() {
         val t = measureTimeMillis {
-            try {
+            tryLoadCache()
+            dexkit.use { dexkit ->
                 applyHooks()
                 handleResult()
                 logDebugInfo()
-            } finally {
-                dexkit.close()
             }
         }
         Logger.printDebug { "${lpparam.packageName} handleLoadPackage: ${t}ms" }
@@ -149,7 +179,6 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         if (!isCached) {
             cache.clearAll()
             cache.put("id", id)
-            Utils.showToastLong("ReVanced Xposed is initializing, please wait...")
         }
     }
 
@@ -165,11 +194,14 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         }
     }
 
+    @SuppressLint("SuspiciousIndentation")
     private fun handleResult() {
+        cache.saveCache()
         val success = failedHooks.isEmpty()
         if (!success) {
             XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion()}")
-            Utils.showToastLong("Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}")
+            XposedBridge.log("Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}")
+            //Utils.showToastLong("Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}")
         }
     }
 
@@ -256,7 +288,7 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
     ): DexKitBridge.() -> List<T> {
         return {
             try {
-                funcFunc().also {
+                funcFunc().also { it ->
                     Logger.printInfo { "$key Matches: ${it.joinToString { serializer(it) }}" }
                 }
             } catch (e: Exception) {

@@ -25,14 +25,14 @@ dependencyResolutionManagement {
 }
 
 plugins {
-    id("com.android.settings") version ("8.13.0")
+    id("com.android.settings") version ("9.2.0")
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     minSdk = 27
 }
 
-rootProject.name = "Revanced Xposed"
+rootProject.name = "Revanced Xposed FE"
 include(":app")
 include(":stub")
