@@ -114,7 +114,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
             // --- BLOCCO MONET ---
             try {
-                if (prefs.getBoolean("enable_monet", true)) {
+                if (prefs.getBoolean("enable_monet", false)) {
                     ThemeHook(app, lpparam).hook()
                 }
             } catch (e: Exception) {
@@ -123,7 +123,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
 
             // --- BLOCCO ROUNDY (Il sospettato numero 1) ---
             try {
-                if (prefs.getBoolean("enable_round_ui", true)) {
+                if (prefs.getBoolean("enable_round_ui", false)) {
                     RoundyUIHook(lpparam).hook()
                 }
             } catch (e: Exception) {
