@@ -38,7 +38,7 @@ public final class UnlockPremiumPatch {
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
             // Works along on-demand, allows playing any song without restriction.
-            new OverrideAttribute("player-license", "open"),
+            new OverrideAttribute("player-license", "on-demand"),
             // Disables shuffle being initially enabled when first playing a playlist.
             new OverrideAttribute("shuffle", FALSE),
             // Allows playing any song on-demand, without a shuffled order.
@@ -60,7 +60,7 @@ public final class UnlockPremiumPatch {
             // Removes the premium button in the nav-bar for tablet users.
             new OverrideAttribute("tablet-free", FALSE, false)
     );
-
+    
     /**
      * A list of home sections feature types ids which should be removed. These ids match the ones from the protobuf
      * response which delivers home sections.
