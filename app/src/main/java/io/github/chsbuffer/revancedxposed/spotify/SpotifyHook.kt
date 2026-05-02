@@ -34,45 +34,38 @@ class SpotifyHook(app: Application, lpparam: LoadPackageParam) : BaseHook(app, l
     // ══════════════════════════════════════════════════════
     // G → NATIVE HTTP BLOCK
     // ══════════════════════════════════════════════════════
-fun g() {
-    runCatching {
+    fun g() {
+        runCatching {
 
-        val cl = classLoader
+            val cl = classLoader
 
-        val httpConnectionImpl =
-            cl.loadClass("com.spotify.core.http.NativeHttpConnection")
+            val httpConnectionImpl =
+                cl.loadClass("com.spotify.core.http.NativeHttpConnection")
 
-        val httpRequest =
-            cl.loadClass("com.spotify.core.http.HttpRequest")
+            val httpRequest =
+                cl.loadClass("com.spotify.core.http.HttpRequest")
 
-        val urlField = httpRequest.getDeclaredField("url")
-        urlField.isAccessible = true
+            val urlField = httpRequest.getDeclaredField("url")
+            urlField.isAccessible = true
 
-        // Liste élargie ads + tracking
-        val blockedKeywords = listOf(
-            "ads"
-        )
+            XposedBridge.hookAllMethods(
+                httpConnectionImpl,
+                "send",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val req = param.args[0]
+                        val url = urlField.get(req) as? String ?: return
 
-        XposedBridge.hookAllMethods(
-            httpConnectionImpl,
-            "send",
-            object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    val req = param.args[0]
-                    val url = urlField.get(req) as? String ?: return
-
-                    val lowerUrl = url.lowercase()
-
-                    if (blockedKeywords.any { lowerUrl.contains(it) }) {
+                    if (url.contains("ads", true)) {
                         XposedBridge.log("G BLOCK: $url")
-                        param.result = null
+                           param.result = null
+                        }
                     }
                 }
-            }
-        )
+            )
 
-    }.onFailure {
-        XposedBridge.log("G error -> ${it.message}")
+        }.onFailure {
+            XposedBridge.log("G error -> ${it.message}")
         }
     }
 }
