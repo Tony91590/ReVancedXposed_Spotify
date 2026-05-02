@@ -50,8 +50,8 @@ public final class UnlockPremiumPatch {
             // Disables player and app ads.
             //new OverrideAttribute("ads", FALSE),
             // Works along on-demand, allows playing any song without restriction.
-            new OverrideAttribute("player-license", "premium"),
-            new OverrideAttribute("player-license-v2", "premium"),
+            new OverrideAttribute("player-license", "open"),
+            new OverrideAttribute("player-license-v2", "open"),
             // Disables shuffle being initially enabled when first playing a playlist.
             new OverrideAttribute("shuffle", FALSE),
             // Allows playing any song on-demand, without a shuffled order.
@@ -68,7 +68,7 @@ public final class UnlockPremiumPatch {
             new OverrideAttribute("nft-disabled", "1"),
             // Enable Spotify Connect and disable other premium related UI, like buying premium.
             // It also removes the download button.
-            new OverrideAttribute("type", "premium"),
+            new OverrideAttribute("type", "open"),
             // Enable Spotify Car Thing hardware device.
             // Device is discontinued and no longer works with the latest releases,
             // but it might still work with older app targets.
