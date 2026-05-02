@@ -3,7 +3,7 @@ import java.util.Random
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
 val gitCommitHashProvider = providers.exec {
@@ -47,10 +47,11 @@ private fun genPackageName(seed: Long): String {
 
 android {
     namespace = "io.github.chsbuffer.revancedxposed"
+    compileSdk = 36
 
     defaultConfig {
         applicationId = myPackageName
-        versionCode = 33
+        versionCode = 36
         versionName = gitCommitDateProvider.get().trim()
         buildConfigField("String", "COMMIT_HASH", "\"${gitCommitHashProvider.get().trim()}\"")
     }
@@ -96,19 +97,13 @@ kotlin {
         jvmTarget = JvmTarget.JVM_17
     }
 }
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
 
 dependencies {
 //    implementation(libs.dexkit)
     implementation(group = "", name = "dexkit-android", ext = "aar")
-    implementation("com.google.flatbuffers:flatbuffers-java:23.5.26") // dexkit dependency
+    implementation("com.google.flatbuffers:flatbuffers-java:25.2.10") // dexkit dependency
     implementation(libs.annotation)
-    testImplementation(kotlin("test-junit5"))
-    testImplementation(libs.junit.jupiter.params)
-    testImplementation(libs.jadx.core)
-    testImplementation(libs.slf4j.simple)
+    implementation(libs.kotlinx.serialization.protobuf)
     compileOnly(libs.xposed)
     compileOnly(project(":stub"))
 }
