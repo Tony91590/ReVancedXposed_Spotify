@@ -150,6 +150,8 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         DexKitCacheBridge.create("", lpparam.appInfo.sourceDir)
     }
 
+    fun getDexKit() = dexkit
+    
     override fun Hook() {
         val t = measureTimeMillis {
             tryLoadCache()
