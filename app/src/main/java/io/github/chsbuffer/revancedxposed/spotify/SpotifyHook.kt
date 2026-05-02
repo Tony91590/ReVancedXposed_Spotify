@@ -10,7 +10,6 @@ import io.github.chsbuffer.revancedxposed.spotify.misc.ads.InterceptAds
 import io.github.chsbuffer.revancedxposed.spotify.misc.widgets.FixThirdPartyLaunchersWidgets
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
-import io.github.chsbuffer.revancedxposed.injectHostClassLoaderToSelf
 
 @Suppress("UNCHECKED_CAST")
 class SpotifyHook(app: Application, lpparam: LoadPackageParam) : BaseHook(app, lpparam) {
