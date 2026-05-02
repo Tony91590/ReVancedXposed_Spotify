@@ -62,7 +62,7 @@ fun SpotifyHook.UnlockPremium() {
                 param.thisObject.callMethod("shufflingContext", false)
             }
         })
-
+/*
     // Hook the method which adds context menu items and return before adding if the item is a Premium ad.
     val contextMenuViewModelClazz = ::contextMenuViewModelClass.clazz
     XposedBridge.hookAllConstructors(
@@ -84,7 +84,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         })
-
+*/
     // Remove ads sections from home.
     ::homeStructureGetSectionsFingerprint.hookMethod {
         after { param ->
