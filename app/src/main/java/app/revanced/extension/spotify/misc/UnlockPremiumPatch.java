@@ -51,7 +51,7 @@ public final class UnlockPremiumPatch {
             //new OverrideAttribute("ads", FALSE),
             // Works along on-demand, allows playing any song without restriction.
             new OverrideAttribute("player-license", "on-demand"),
-            new OverrideAttribute("player-license-v2", "on-demand"),
+            //new OverrideAttribute("player-license-v2", "on-demand"),
             // Disables shuffle being initially enabled when first playing a playlist.
             new OverrideAttribute("shuffle", FALSE),
             // Allows playing any song on-demand, without a shuffled order.
