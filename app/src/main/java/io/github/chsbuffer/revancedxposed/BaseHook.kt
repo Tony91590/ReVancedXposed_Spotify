@@ -25,6 +25,9 @@ import org.luckypray.dexkit.wrap.DexField
 import org.luckypray.dexkit.wrap.DexMethod
 import java.io.File
 import java.lang.reflect.Constructor
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 import java.lang.reflect.Member
 import java.lang.reflect.Method
 import kotlin.reflect.KFunction0
@@ -96,7 +99,7 @@ class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
         Pairs(mutableMapOf())
     }
 
-    val map get() = pref.map
+    val map: MutableMap<String, String?> = Collections.synchronizedMap(pref.map)
 
     override fun clearAll() {
         map.clear()
@@ -109,7 +112,7 @@ class SharedPrefCache(app: Application) : DexKitCacheBridge.Cache {
     override fun getList(
         key: String, default: List<String>?
     ): List<String>? =
-        map.getOrDefault(key, null)?.takeIf(String::isNotBlank)?.split('|') ?: default
+        map.getOrDefault(key, null)?.takeIf { it.isNotEmpty() }?.split('|') ?: default
 
     override fun put(key: String, value: String) {
         map.put(key, value)
@@ -133,13 +136,13 @@ class DependedHookFailedException(
 ) : Exception("Depended hook $subHookName failed.", exception)
 
 @SuppressLint("CommitPrefEdits")
-abstract class BaseHook(private val app: Application, val lpparam: LoadPackageParam) : IHook {
+abstract class BaseHook(protected val app: Application, val lpparam: LoadPackageParam) : IHook {
     override val classLoader = lpparam.classLoader!!
 
     // hooks
     abstract val hooks: Array<HookFunction>
-    private val appliedHooks = mutableSetOf<HookFunction>()
-    private val failedHooks = mutableListOf<HookFunction>()
+    private val appliedHooks: MutableSet<HookFunction> = Collections.newSetFromMap(ConcurrentHashMap())
+    private val failedHooks: MutableList<HookFunction> = Collections.synchronizedList(mutableListOf())
 
     // cache
     private val moduleRel = BuildConfig.COMMIT_HASH
@@ -150,27 +153,24 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         DexKitCacheBridge.create("", lpparam.appInfo.sourceDir)
     }
 
-    fun getDexKit() = dexkit
-    
     override fun Hook() {
+        val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
         val t = measureTimeMillis {
-            tryLoadCache()
+            tryLoadCache(packageInfo)
             try {
                 applyHooks()
-                handleResult()
-                logDebugInfo()
+                handleResult(packageInfo)
+                logDebugInfo(packageInfo)
             } finally {
                 dexkit.close()
             }
         }
-        Logger.printDebug { "${lpparam.packageName} handleLoadPackage: ${t}ms" }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun tryLoadCache() {
+    private fun tryLoadCache(packageInfo: android.content.pm.PackageInfo) {
         // cache by host update time + module version
         // also no cache if is DEBUG
-        val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
 
         val id = "${packageInfo.lastUpdateTime}-$moduleRel"
         val cachedId = cache.get("id", null)
@@ -183,43 +183,62 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         if (!isCached) {
             cache.clearAll()
             cache.put("id", id)
-            Utils.showToastLong("ReVanced Xposed is initializing, please wait...")
+            Utils.showToastLong("ReVanced is loading..")
         }
     }
 
     private fun applyHooks() {
-        hooks.forEach { hook ->
-            if (appliedHooks.contains(hook)) return@forEach
-            runCatching(hook).onFailure { err ->
+        // First hook (Extension) must run synchronously: it injects the ClassLoader
+        // needed by all subsequent hooks.
+        val first = hooks.firstOrNull() ?: return
+        if (!appliedHooks.contains(first)) {
+            runCatching(first).onFailure { err ->
                 XposedBridge.log(err)
-                failedHooks.add(hook)
+                failedHooks.add(first)
             }.onSuccess {
-                appliedHooks.add(hook)
+                appliedHooks.add(first)
             }
+        }
+
+        // Remaining hooks are independent — run them in parallel.
+        val remaining = hooks.drop(1).filter { !appliedHooks.contains(it) }
+        if (remaining.isEmpty()) return
+
+        val executor = Executors.newFixedThreadPool(remaining.size)
+        try {
+            remaining.map { hook ->
+                executor.submit {
+                    runCatching(hook).onFailure { err ->
+                        XposedBridge.log(err)
+                        failedHooks.add(hook)
+                    }.onSuccess {
+                        appliedHooks.add(hook)
+                    }
+                }
+            }.forEach { it.get() }
+        } finally {
+            executor.shutdown()
         }
     }
 
-    private fun handleResult() {
+    private fun handleResult(packageInfo: android.content.pm.PackageInfo) {
         cache.saveCache()
         val success = failedHooks.isEmpty()
         if (!success) {
-            XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion()}")
+            XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion(packageInfo)}")
             Utils.showToastLong("Error while apply following Hooks:\n${failedHooks.joinToString { it.name }}")
         }
     }
 
-    private fun logDebugInfo() {
+    private fun logDebugInfo(packageInfo: android.content.pm.PackageInfo) {
         val success = failedHooks.isEmpty()
-        if (DEBUG) {
-            XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion()}")
-            if (success) {
-                Utils.showToastLong("apply hooks success")
-            }
+        XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion(packageInfo)}")
+        if (success) {
+            Utils.showToastLong("ReVanced: Ready")
         }
     }
 
-    private fun getAppVersion(): String {
-        val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
+    private fun getAppVersion(packageInfo: android.content.pm.PackageInfo): String {
         val versionName = packageInfo.versionName
         val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             packageInfo.longVersionCode
@@ -292,7 +311,7 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         return {
             try {
                 funcFunc().also {
-                    Logger.printInfo { "$key Matches: ${it.joinToString { serializer(it) }}" }
+                    Logger.printInfo { "$key Matches: ${it.joinToString { item -> serializer(item) }}" }
                 }
             } catch (e: Exception) {
                 Logger.printInfo({ "Fingerprint $key Not Found" }, e)
