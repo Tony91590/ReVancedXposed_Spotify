@@ -183,7 +183,7 @@ abstract class BaseHook(protected val app: Application, val lpparam: LoadPackage
         if (!isCached) {
             cache.clearAll()
             cache.put("id", id)
-            Utils.showToastLong("ReVanced is loading..")
+            //Utils.showToastLong("ReVanced is loading..")
         }
     }
 
@@ -234,7 +234,7 @@ abstract class BaseHook(protected val app: Application, val lpparam: LoadPackage
         val success = failedHooks.isEmpty()
         XposedBridge.log("${lpparam.appInfo.packageName} version: ${getAppVersion(packageInfo)}")
         if (success) {
-            Utils.showToastLong("ReVanced: Ready")
+            //Utils.showToastLong("ReVanced: Ready")
         }
     }
 
